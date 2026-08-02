@@ -1,0 +1,241 @@
+import React, { useState, useEffect } from "react";
+import { Link, Navigate } from "react-router-dom";
+import { base44 } from "@/api/base44Client";
+import { Button } from "@/components/ui/button";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
+import { ArrowLeft, Loader2, GitCompare } from "lucide-react";
+import AdminHeader from "@/components/layout/AdminHeader";
+import StatsCompare from "@/components/admin/StatsCompare";
+import { useAuth } from "@/lib/AuthContext";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+
+const MONTH_LABELS = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
+const UNITS = [
+  { id: "week", label: "Settimana" },
+  { id: "month", label: "Mese" },
+  { id: "year", label: "Anno" },
+];
+
+function pad(n) { return String(n).padStart(2, "0"); }
+function fmt(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
+
+function isoWeekNumber(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  const dayNum = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+}
+
+function isoWeekMonday(year, week) {
+  const jan4 = new Date(year, 0, 4);
+  const day = jan4.getDay() || 7;
+  const week1Mon = new Date(jan4);
+  week1Mon.setDate(jan4.getDate() - (day - 1));
+  const mon = new Date(week1Mon);
+  mon.setDate(week1Mon.getDate() + (week - 1) * 7);
+  return mon;
+}
+
+function rangeFor(unit, value, year) {
+  if (unit === "week") {
+    const mon = isoWeekMonday(year, value);
+    const tue = new Date(mon); tue.setDate(mon.getDate() + 1);
+    const sat = new Date(mon); sat.setDate(mon.getDate() + 5);
+    return { from: fmt(tue), to: fmt(sat) };
+  }
+  if (unit === "month") {
+    const last = new Date(year, value, 0).getDate();
+    return { from: `${year}-${pad(value)}-01`, to: `${year}-${pad(value)}-${pad(last)}` };
+  }
+  return { from: `${year}-01-01`, to: `${year}-12-31` };
+}
+
+const MONTH_SHORT = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"];
+function weekRangeStr(year, week) {
+  const mon = isoWeekMonday(year, week);
+  const tue = new Date(mon); tue.setDate(mon.getDate() + 1);
+  const sat = new Date(mon); sat.setDate(mon.getDate() + 5);
+  if (tue.getMonth() === sat.getMonth()) return `${tue.getDate()}–${sat.getDate()} ${MONTH_SHORT[tue.getMonth()]} ${sat.getFullYear()}`;
+  return `${tue.getDate()} ${MONTH_SHORT[tue.getMonth()]} – ${sat.getDate()} ${MONTH_SHORT[sat.getMonth()]} ${sat.getFullYear()}`;
+}
+
+function labelFor(unit, vals) {
+  if (unit === "week") return `Settimana ${vals.week} · ${weekRangeStr(vals.year, vals.week)}`;
+  if (unit === "month") return `${MONTH_LABELS[vals.month - 1]} ${vals.year}`;
+  return `Anno ${vals.year}`;
+}
+
+function computeStats(bookings, svcPrice) {
+  const real = (bookings || []).filter((b) => b.status !== "blocked" && b.status !== "cancelled");
+  const svcCount = {};
+  real.forEach((b) => { if (b.service_id && b.service_name) svcCount[b.service_name] = (svcCount[b.service_name] || 0) + 1; });
+  const topService = Object.entries(svcCount).sort((a, b) => b[1] - a[1])[0] || null;
+  const revenue = real.filter((b) => b.status === "completed").reduce((acc, b) => acc + (svcPrice[b.service_id] || 0), 0);
+  const wdCount = {};
+  real.forEach((b) => { const wd = new Date(b.date + "T00:00:00").getDay(); wdCount[wd] = (wdCount[wd] || 0) + 1; });
+  const topWd = Object.entries(wdCount).sort((a, b) => b[1] - a[1])[0] || null;
+  const tmCount = {};
+  real.forEach((b) => { if (b.start_time) tmCount[b.start_time] = (tmCount[b.start_time] || 0) + 1; });
+  const topTm = Object.entries(tmCount).sort((a, b) => b[1] - a[1])[0] || null;
+  return { topService, revenue, topWd, topTm, total: real.length };
+}
+
+function Field({ label, children }) {
+  return (
+    <div className="flex-1 space-y-1 min-w-[6rem]">
+      <span className="text-[11px] font-medium text-muted-foreground">{label}</span>
+      {children}
+    </div>
+  );
+}
+
+export default function AdminStats() {
+  const { user } = useAuth();
+  const now = new Date();
+  const curYear = now.getFullYear();
+  const curMonth = now.getMonth() + 1;
+  const curWeek = isoWeekNumber(now);
+
+  const [unit, setUnit] = useState("month");
+  const [aWeek, setAWeek] = useState(curWeek);
+  const [aMonth, setAMonth] = useState(curMonth);
+  const [aYear, setAYear] = useState(curYear);
+  const [bWeek, setBWeek] = useState(curWeek);
+  const [bMonth, setBMonth] = useState(curMonth);
+  const [bYear, setBYear] = useState(curYear - 1);
+  const [dataA, setDataA] = useState(null);
+  const [dataB, setDataB] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [rtKey, setRtKey] = useState(0);
+
+  const years = Array.from({ length: 5 }, (_, i) => curYear - 2 + i);
+
+  const selKey = useDebouncedValue(JSON.stringify({ unit, aWeek, aMonth, aYear, bWeek, bMonth, bYear, rtKey }), 250);
+
+  useEffect(() => {
+    let cancelled = false;
+    const s = JSON.parse(selKey);
+    (async () => {
+      setLoading(true);
+      try {
+        const aVal = s.unit === "week" ? s.aWeek : s.unit === "month" ? s.aMonth : null;
+        const ra = rangeFor(s.unit, aVal, s.aYear);
+        const bVal = s.unit === "week" ? s.bWeek : s.unit === "month" ? s.bMonth : null;
+        const rb = rangeFor(s.unit, bVal, s.bYear);
+        const [bookingsA, bookingsB, services] = await Promise.all([
+          base44.entities.Booking.filter({ date: { $gte: ra.from, $lte: ra.to } }, undefined, 1000),
+          base44.entities.Booking.filter({ date: { $gte: rb.from, $lte: rb.to } }, undefined, 1000),
+          base44.entities.Service.list(),
+        ]);
+        const svcPrice = {};
+        (services || []).forEach((p) => { svcPrice[p.id] = Number(p.price) || 0; });
+        if (!cancelled) { setDataA(computeStats(bookingsA, svcPrice)); setDataB(computeStats(bookingsB, svcPrice)); }
+      } catch (e) {
+        if (!cancelled) { setDataA(null); setDataB(null); }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [selKey]);
+
+  // Aggiornamento real-time delle statistiche
+  useEffect(() => {
+    const unsub = base44.entities.Booking.subscribe(() => { setRtKey((k) => k + 1); });
+    return unsub;
+  }, []);
+
+  if (user && user.role !== "admin") return <Navigate to="/" replace />;
+
+  const aVals = unit === "week" ? { week: aWeek, year: aYear } : unit === "month" ? { month: aMonth, year: aYear } : { year: aYear };
+  const bVals = unit === "week" ? { week: bWeek, year: bYear } : unit === "month" ? { month: bMonth, year: bYear } : { year: bYear };
+  const weekOptions = Array.from({ length: 52 }, (_, i) => i + 1);
+
+  const renderPeriod = (tag, vals, setWeek, setMonth, setYear) => {
+    const isA = tag === "A";
+    return (
+      <div className={`rounded-xl border p-3 ${isA ? "border-primary/30 bg-primary/5" : "border-brand/30 bg-brand/5"}`}>
+        <div className="flex items-center justify-between gap-2">
+          <span className={`inline-flex items-center gap-1.5 text-xs font-semibold ${isA ? "text-primary" : "text-brand"}`}>
+            <span className={`h-2 w-2 rounded-full ${isA ? "bg-primary" : "bg-brand"}`} /> Periodo {tag}
+          </span>
+          {unit === "week" && <span className="text-[11px] text-muted-foreground">{weekRangeStr(vals.year, vals.week)}</span>}
+        </div>
+        <div className="mt-2 flex flex-wrap items-end gap-2">
+          {unit === "week" && (
+            <Field label="Settimana">
+              <Select value={String(vals.week)} onValueChange={(v) => setWeek(Number(v))}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {weekOptions.map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
+          {unit === "month" && (
+            <Field label="Mese">
+              <Select value={String(vals.month)} onValueChange={(v) => setMonth(Number(v))}>
+                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {MONTH_LABELS.map((m, i) => <SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
+          )}
+          <Field label="Anno">
+            <Select value={String(vals.year)} onValueChange={(v) => setYear(Number(v))}>
+              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {years.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Field>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="flex min-h-screen flex-col bg-secondary/30">
+      <AdminHeader />
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
+        <div className="mb-6">
+          <Button asChild variant="ghost" size="sm" className="mb-2 -ml-2 hidden md:inline-flex"><Link to="/admin"><ArrowLeft className="mr-2 h-4 w-4" /> Dashboard</Link></Button>
+          <h1 className="font-heading text-3xl font-semibold tracking-tight">Analisi performance</h1>
+        </div>
+
+        <div className="mb-4 flex flex-wrap gap-2">
+          {UNITS.map((u) => (
+            <Button key={u.id} size="sm" variant={unit === u.id ? "default" : "outline"} onClick={() => setUnit(u.id)}>{u.label}</Button>
+          ))}
+        </div>
+
+        <div className="mb-6 rounded-2xl border border-border bg-card p-4">
+          <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <GitCompare className="h-4 w-4 text-primary" /> Confronta due periodi
+          </div>
+          <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {renderPeriod("A", aVals, setAWeek, setAMonth, setAYear)}
+            {renderPeriod("B", bVals, setBWeek, setBMonth, setBYear)}
+          </div>
+        </div>
+
+        {loading && dataA ? (
+          <div className="mb-4 h-1 w-full overflow-hidden rounded-full bg-secondary">
+            <div className="h-full w-1/3 animate-pulse rounded-full bg-primary/60" />
+          </div>
+        ) : null}
+        {loading && !dataA ? (
+          <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+        ) : !dataA ? (
+          <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center text-sm text-muted-foreground">Impossibile caricare le statistiche.</div>
+        ) : (
+          <div className={loading ? "opacity-70" : ""}>
+            <StatsCompare labelA={labelFor(unit, aVals)} labelB={labelFor(unit, bVals)} dataA={dataA} dataB={dataB} />
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
