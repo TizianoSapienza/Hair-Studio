@@ -1,27 +1,21 @@
 import React, { useState, useEffect } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { staffApi } from "@/api/catalogApi";
+import { bookingsApi } from "@/api/bookingsApi";
+import { scheduleApi } from "@/api/scheduleApi";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Check, Clock, Loader2, Scissors, CalendarCheck, CalendarDays, Sparkles } from "lucide-react";
 import SiteHeader from "@/components/layout/SiteHeader";
-import CalendarView, { toDateString } from "@/components/booking/CalendarView";
+import CalendarView from "@/components/booking/CalendarView";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "sonner";
 import { formatDateIT } from "@/lib/salonConfig";
+import { toDateString } from "@/lib/dateUtils";
+import { formatDuration } from "@/lib/format";
+import { extractError } from "@/lib/apiError";
 import useServices from "@/hooks/useServices";
-
-function formatDuration(min) {
-  if (min < 60) return `${min} min`;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return m ? `${h}h ${m}min` : `${h}h`;
-}
-function slotsNeededFor(s) { return Math.max(1, Math.ceil(s.duration_minutes / 30)); }
-function extractError(err) {
-  return err?.response?.data?.error || err?.data?.error || err?.message || "Errore sconosciuto";
-}
 
 export default function Booking() {
   const { user } = useAuth();
@@ -36,21 +30,26 @@ export default function Booking() {
   const [success, setSuccess] = useState(false);
   const [assignedStaff, setAssignedStaff] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [slotMinutes, setSlotMinutes] = useState(30);
   const queryClient = useQueryClient();
 
-  const { services = [], isLoading: loadingSvc } = useServices();
+  const { data: services = [], isLoading: loadingSvc } = useServices();
 
   useEffect(() => {
-    base44.entities.Staff.list("order")
-      .then((items) => setStaff(items || []))
+    staffApi.listPublic()
+      .then((res) => setStaff(res.staff || []))
       .catch(() => setStaff([]));
+    scheduleApi.openingHours()
+      .then((res) => { if (res.slotMinutes) setSlotMinutes(res.slotMinutes); })
+      .catch(() => {});
   }, []);
+
+  const slotsNeededFor = (s) => Math.max(1, Math.ceil(s.durationMinutes / slotMinutes));
 
   const createMutation = useMutation({
     mutationFn: async (payload) => {
-      const res = await base44.functions.invoke("CreateBooking", payload);
-      if (res.data?.error) throw new Error(res.data.error);
-      return res.data;
+      const res = await bookingsApi.create(payload);
+      return res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["myBookings"] });
@@ -83,11 +82,11 @@ export default function Booking() {
     try {
       const result = await createMutation.mutateAsync({
         date: toDateString(date),
-        start_time: selectedSlot,
-        service_id: selectedService.id,
-        staff_id: selectedStaff,
+        startTime: selectedSlot,
+        serviceId: selectedService.id,
+        staffId: selectedStaff,
       });
-      setAssignedStaff(result?.booking?.staff_name || staffLabel);
+      setAssignedStaff(result?.booking?.staffName || staffLabel);
       setSuccess(true);
       setRefreshKey((k) => k + 1);
     } catch (err) {
@@ -109,7 +108,7 @@ export default function Booking() {
         <div className="mb-6">
           <p className="text-sm font-semibold uppercase tracking-wider text-primary">Prenotazione</p>
           <h1 className="mt-1 font-heading text-3xl font-semibold tracking-tight">
-            Ciao{user?.full_name ? `, ${user.full_name.split(" ")[0]}` : ""} 👋 scegli il tuo servizio
+            Ciao{user?.firstName ? `, ${user.firstName}` : ""} 👋 scegli il tuo servizio
           </h1>
         </div>
 
@@ -134,7 +133,7 @@ export default function Booking() {
                       <div className="min-w-0">
                         <p className="font-medium">{s.name}</p>
                         <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
-                          <Clock className="h-3.5 w-3.5" /> {formatDuration(s.duration_minutes)} · {slotsNeededFor(s)} slot
+                          <Clock className="h-3.5 w-3.5" /> {formatDuration(s.durationMinutes)} · {slotsNeededFor(s)} slot
                         </p>
                       </div>
                       <div className="text-right">
@@ -222,7 +221,7 @@ export default function Booking() {
                   <div className="flex justify-between"><span className="text-muted-foreground">Operatore</span><span className="font-medium">{staffLabel}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Data</span><span className="font-medium capitalize">{formatDateIT(toDateString(date))}</span></div>
                   <div className="flex justify-between"><span className="text-muted-foreground">Orario</span><span className="font-medium">{selectedSlot}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Durata</span><span className="font-medium">{formatDuration(selectedService.duration_minutes)}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Durata</span><span className="font-medium">{formatDuration(selectedService.durationMinutes)}</span></div>
                   <div className="flex justify-between border-t border-border pt-2"><span className="text-muted-foreground">Prezzo</span><span className="font-semibold text-primary">€{Number(selectedService.price).toFixed(0)}</span></div>
                 </div>
               )}

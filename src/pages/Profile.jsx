@@ -1,18 +1,19 @@
-import React, { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import React, { Suspense, useEffect, useState } from "react";
+import { accountApi, authApi } from "@/api/authApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, Phone, Loader2, Save, Trash2, KeyRound, UserCircle, Eye, EyeOff, Check, X } from "lucide-react";
 import SiteHeader from "@/components/layout/SiteHeader";
-import CountryCodeSelect, { splitPhone } from "@/components/profile/CountryCodeSelect";
+import { splitPhone } from "@/lib/phone";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { PASSWORD_REGEX } from "@/lib/passwordRules";
 
-const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+const CountryCodeSelect = React.lazy(() => import("@/components/profile/CountryCodeSelect"));
 
 export default function Profile() {
   const { user, checkUserAuth, logout } = useAuth();
@@ -25,6 +26,8 @@ export default function Profile() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [showCurrent, setShowCurrent] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNew, setShowNew] = useState(false);
@@ -41,45 +44,31 @@ export default function Profile() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    base44.auth.me()
-      .then((me) => {
-        const fn = (me.first_name || me.data?.first_name || "").trim();
-        const ln = (me.last_name || me.data?.last_name || "").trim();
-        if (fn || ln) {
-          setFirstName(fn);
-          setLastName(ln);
-        } else if (me.full_name) {
-          const parts = me.full_name.trim().split(" ");
-          setFirstName(parts[0] || "");
-          setLastName(parts.slice(1).join(" ") || "");
-        }
-        setEmail(me.email || "");
-        const raw = me.phone || me.data?.phone || "";
-        const { code: c, number } = splitPhone(raw);
-        setCode(c);
-        setPhone(number);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+    if (!user) return;
+    setFirstName(user.firstName || "");
+    setLastName(user.lastName || "");
+    setEmail(user.email || "");
+    const { code: c, number } = splitPhone(user.phone || "");
+    setCode(c);
+    setPhone(number);
+    setLoading(false);
+  }, [user]);
 
   const handleSave = async (e) => {
     e.preventDefault();
     const num = phone.replace(/\s+/g, "").replace(/^(0+)/, "");
-    if (num && !/^\d{6,}$/.test(num)) {
+    if (!num || !/^\d{6,}$/.test(num)) {
       toast.error("Numero non valido", { description: "Inserisci solo le cifre del numero, senza prefisso." });
       return;
     }
     setSaving(true);
     try {
-      const full = num ? `${code} ${num}` : "";
-      await base44.auth.updateMe({ first_name: firstName.trim(), last_name: lastName.trim(), phone: full });
-      const displayName = `${firstName.trim()} ${lastName.trim()}`.trim();
-      if (displayName) {
-        try {
-          await base44.entities.Booking.updateMany({ created_by_id: user.id }, { $set: { client_name: displayName } });
-        } catch (e) { /* best-effort: sincronizza le prenotazioni esistenti */ }
-      }
+      await accountApi.updateProfile({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email,
+        phone: `${code} ${num}`,
+      });
       await checkUserAuth();
       toast.success("Profilo aggiornato");
     } catch (err) {
@@ -101,24 +90,25 @@ export default function Profile() {
     }
     setChangingPwd(true);
     try {
-      await base44.auth.changePassword({ userId: user.id, newPassword });
-      toast.success("Password aggiornata");
-      setNewPassword(""); setConfirmPassword("");
+      await authApi.changePassword({ currentPassword, newPassword });
     } catch (err) {
       toast.error("Errore", { description: err.message });
-    } finally {
       setChangingPwd(false);
+      return;
     }
+    //Il cambio password revoca tutte le sessioni lato server: si riporta l'utente al login.
+    toast.success("Password aggiornata, effettua di nuovo l'accesso");
+    await logout();
+    navigate("/login");
   };
 
   const handleDelete = async (e) => {
     e.preventDefault();
     setDeleting(true);
     try {
-      const res = await base44.functions.invoke("DeleteAccount", {});
-      if (res.data?.error) throw new Error(res.data.error);
+      await accountApi.deleteAccount();
       toast.success("Account eliminato");
-      await logout(false);
+      await logout();
       navigate("/");
     } catch (err) {
       toast.error("Errore", { description: err.message });
@@ -154,10 +144,9 @@ export default function Profile() {
               {loading ? <Skeleton className="h-9 w-full" /> : (
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input id="email" value={email} disabled className="pl-10 bg-muted/50" />
+                  <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10" />
                 </div>
               )}
-              <p className="text-xs text-muted-foreground">L'email di accesso non può essere modificata direttamente. Per cambiarla, contatta il supporto Base44.</p>
             </div>
 
             <div className="space-y-2">
@@ -169,7 +158,9 @@ export default function Profile() {
                 </div>
               ) : (
                 <div className="flex gap-2">
-                  <CountryCodeSelect value={code} onChange={setCode} />
+                  <Suspense fallback={<Skeleton className="h-9 w-[112px] shrink-0" />}>
+                    <CountryCodeSelect value={code} onChange={setCode} />
+                  </Suspense>
                   <div className="relative min-w-0 flex-1">
                     <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <Input id="phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} className="pl-10" placeholder="333 1234567" />
@@ -190,6 +181,15 @@ export default function Profile() {
           <h2 className="flex items-center gap-2 font-heading text-lg font-semibold"><KeyRound className="h-5 w-5 text-primary" /> Sicurezza</h2>
           <p className="mt-1 text-sm text-muted-foreground">Inserisci la password attuale e la nuova per aggiornarla direttamente.</p>
           <form onSubmit={handlePasswordChange} className="mt-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="current_password">Password attuale</Label>
+              <div className="relative">
+                <Input id="current_password" type={showCurrent ? "text" : "password"} autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="••••••••" required />
+                <button type="button" onClick={() => setShowCurrent((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label="Mostra password">
+                  {showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="new_password">Nuova password</Label>

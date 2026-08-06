@@ -1,15 +1,15 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LogIn, Mail, Lock, Loader2, Eye, EyeOff } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
-import GoogleIcon from "@/components/GoogleIcon";
 import { safeReturnTo } from "@/lib/authReturnTo";
 
 export default function Login() {
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
@@ -22,23 +22,13 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      const result = await base44.auth.loginViaEmailPassword(email, password);
-      if (result?.access_token) base44.auth.setToken(result.access_token);
-      const me = result?.user;
-      if (me && me.role === "admin") {
-        window.location.href = "/admin";
-        return;
-      }
-      window.location.href = returnTo;
+      const me = await login(email, password);
+      window.location.href = me?.role === "admin" ? "/admin" : returnTo;
     } catch (err) {
       setError(err.message || "Email o password non validi");
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", returnTo);
   };
 
   return (
@@ -48,14 +38,6 @@ export default function Login() {
       subtitle="Accedi al tuo account"
       footer={<>Non hai un account? <Link to={"/register" + (returnTo !== "/" ? "?returnTo=" + encodeURIComponent(returnTo) : "")} className="text-primary font-medium hover:underline">Crea un account</Link></>}
     >
-      <Button variant="outline" className="w-full h-12 text-sm font-medium mb-6" onClick={handleGoogle}>
-        <GoogleIcon className="w-5 h-5 mr-2" /> Continua con Google
-      </Button>
-      <div className="relative mb-6">
-        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
-        <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-3 text-muted-foreground">oppure</span></div>
-      </div>
-
       {error && <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
 
       <form onSubmit={handleSubmit} className="space-y-4">

@@ -35,7 +35,7 @@ export default function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.2 }}
         >
-          {content?.hero_title || "Stile che si taglia su misura, a Mascalucia."}
+          {content?.heroTitle || "Stile che si taglia su misura, a Mascalucia."}
         </motion.h1>
         <motion.p
           className="mt-5 max-w-xl text-base text-white/80 sm:text-lg"
@@ -43,7 +43,7 @@ export default function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.32 }}
         >
-          {content?.hero_subtitle || "Barbershop moderno: tagli, barba e colore curati da tre professionisti. Prenota online il tuo turno in pochi secondi."}
+          {content?.heroSubtitle || "Barbershop moderno: tagli, barba e colore curati da tre professionisti. Prenota online il tuo turno in pochi secondi."}
         </motion.p>
         {!isAdmin && (
           <motion.div

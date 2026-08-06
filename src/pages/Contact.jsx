@@ -5,15 +5,18 @@ import SiteHeader from "@/components/layout/SiteHeader";
 import SiteFooter from "@/components/layout/SiteFooter";
 import useBusinessInfo from "@/hooks/useBusinessInfo";
 import { SALON } from "@/lib/salonConfig";
+import { safeHref } from "@/lib/safeUrl";
 import SeoJsonLd from "@/components/SeoJsonLd";
 
 export default function Contact() {
   const { data: info } = useBusinessInfo();
-  const name = info?.nome_attivita || SALON.name;
-  const address = info?.indirizzo || SALON.address;
-  const phone = info?.telefono || SALON.phone;
+  const name = info?.businessName || SALON.name;
+  const address = info?.address || SALON.address;
+  const phone = info?.phone || SALON.phone;
   const email = info?.email || SALON.email;
-  const instagram = info?.instagram_url || SALON.instagram;
+  const instagram = safeHref(info?.instagramUrl || SALON.instagram);
+  const googleMapsUrl = safeHref(info?.googleMapsUrl);
+  const googleReviewUrl = safeHref(info?.googleReviewUrl);
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 
   return (
@@ -54,16 +57,16 @@ export default function Contact() {
           )}
         </div>
 
-        {(info?.google_maps_link || info?.google_review_link) && (
+        {(googleMapsUrl || googleReviewUrl) && (
           <div className="mt-6 flex flex-wrap gap-3">
-            {info?.google_maps_link && (
+            {googleMapsUrl && (
               <Button asChild variant="outline" size="sm">
-                <a href={info.google_maps_link} target="_blank" rel="noreferrer"><MapPin className="mr-2 h-4 w-4" /> Vedi la scheda Google</a>
+                <a href={googleMapsUrl} target="_blank" rel="noreferrer"><MapPin className="mr-2 h-4 w-4" /> Vedi la scheda Google</a>
               </Button>
             )}
-            {info?.google_review_link && (
+            {googleReviewUrl && (
               <Button asChild variant="outline" size="sm">
-                <a href={info.google_review_link} target="_blank" rel="noreferrer"><Star className="mr-2 h-4 w-4" /> Lasciaci una recensione</a>
+                <a href={googleReviewUrl} target="_blank" rel="noreferrer"><Star className="mr-2 h-4 w-4" /> Lasciaci una recensione</a>
               </Button>
             )}
           </div>

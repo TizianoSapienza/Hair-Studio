@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { authApi } from "@/api/authApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Lock, Loader2, AlertTriangle, Eye, EyeOff, Check, X } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
+import { PASSWORD_REGEX } from "@/lib/passwordRules";
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -17,7 +18,7 @@ export default function ResetPassword() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const hasLen = newPassword.length >= 8;
+  const hasLen = PASSWORD_REGEX.test(newPassword);
   const hasMatch = newPassword.length > 0 && newPassword === confirmPassword;
 
   const handleSubmit = async (e) => {
@@ -28,12 +29,12 @@ export default function ResetPassword() {
       return;
     }
     if (!hasLen) {
-      setError("La password deve avere almeno 8 caratteri");
+      setError("La password deve contenere una lettera, un numero e un carattere speciale (min. 8 caratteri)");
       return;
     }
     setLoading(true);
     try {
-      await base44.auth.resetPassword({ resetToken, newPassword });
+      await authApi.resetPassword({ token: resetToken, newPassword });
       window.location.href = "/login";
     } catch (err) {
       setError(err.message || "Impossibile reimpostare la password");
@@ -116,7 +117,7 @@ export default function ResetPassword() {
           </div>
         </div>
         <ul className="space-y-1 text-xs">
-          <Req ok={hasLen} label="Almeno 8 caratteri" />
+          <Req ok={hasLen} label="Lettera, numero e carattere speciale (min. 8)" />
           <Req ok={hasMatch} label="Le password coincidono" />
         </ul>
         <Button type="submit" className="h-12 w-full font-medium" disabled={loading || !hasLen || !hasMatch}>

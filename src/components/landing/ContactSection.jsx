@@ -15,12 +15,11 @@ const DEFAULT_ORARI = [
 ];
 
 export default function ContactSection() {
-  const { data: info, isLoading } = useBusinessInfo();
-  const address = info?.indirizzo || SALON.address;
-  const phone = info?.telefono || SALON.phone;
+  const { data: info } = useBusinessInfo();
+  const address = info?.address || SALON.address;
+  const phone = info?.phone || SALON.phone;
   const email = info?.email || SALON.email;
-  const orari = info?.orari && info.orari.length ? info.orari : DEFAULT_ORARI;
-  const noteOrari = info?.note_orari || "";
+  const orari = info?.openingHoursDisplay?.length ? info.openingHoursDisplay : DEFAULT_ORARI;
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
   const mapsEmbed = `https://www.google.com/maps?q=${encodeURIComponent(address)}&output=embed`;
 
@@ -75,7 +74,6 @@ export default function ContactSection() {
                   </li>
                 ))}
               </ul>
-              {noteOrari && <p className="mt-3 text-xs text-muted-foreground">{noteOrari}</p>}
             </div>
           </Reveal>
 

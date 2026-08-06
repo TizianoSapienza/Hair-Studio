@@ -4,7 +4,6 @@ import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider } from '@/lib/AuthContext';
-import UserNotRegisteredError from './components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import BottomNav from '@/components/layout/BottomNav';
@@ -54,14 +53,16 @@ function App() {
               <Route path="/prenota" element={<Booking />} />
               <Route path="/le-mie-prenotazioni" element={<MyBookings />} />
               <Route path="/profilo" element={<Profile />} />
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/servizi" element={<ManageServices />} />
-              <Route path="/admin/clienti" element={<ManageClients />} />
-              <Route path="/admin/statistiche" element={<AdminStats />} />
-              <Route path="/admin/impostazioni" element={<AdminSettings />} />
-              <Route path="/admin/staff" element={<ManageStaff />} />
-              <Route path="/admin/orari" element={<ManageSchedule />} />
-              <Route path="/admin/contenuti" element={<ManageHomeContent />} />
+              <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} requireAdmin />}>
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/servizi" element={<ManageServices />} />
+                <Route path="/admin/clienti" element={<ManageClients />} />
+                <Route path="/admin/statistiche" element={<AdminStats />} />
+                <Route path="/admin/impostazioni" element={<AdminSettings />} />
+                <Route path="/admin/staff" element={<ManageStaff />} />
+                <Route path="/admin/orari" element={<ManageSchedule />} />
+                <Route path="/admin/contenuti" element={<ManageHomeContent />} />
+              </Route>
             </Route>
             <Route path="*" element={<PageNotFound />} />
           </AnimatedRoutes>

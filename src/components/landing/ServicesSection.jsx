@@ -1,26 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Clock, Euro } from "lucide-react";
 import { motion } from "framer-motion";
-import { base44 } from "@/api/base44Client";
+import useServices from "@/hooks/useServices";
+import { formatDuration } from "@/lib/format";
 import Reveal from "./Reveal";
 
-function formatDuration(min) {
-  if (min < 60) return `${min} min`;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return m ? `${h}h ${m}min` : `${h}h`;
-}
-
 export default function ServicesSection() {
-  const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    base44.functions.invoke("GetPublicSiteData")
-      .then((res) => setServices(res.data?.services || []))
-      .catch(() => setServices([]))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: services = [], isLoading: loading } = useServices();
 
   return (
     <section id="servizi" className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
@@ -62,7 +48,7 @@ export default function ServicesSection() {
               {s.description && <p className="mt-2 text-sm text-muted-foreground">{s.description}</p>}
               <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
                 <Clock className="h-4 w-4 text-brand" />
-                {formatDuration(s.duration_minutes)}
+                {formatDuration(s.durationMinutes)}
               </div>
             </motion.div>
           ))}

@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Link, Navigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { Link } from "react-router-dom";
+import { servicesApi } from "@/api/catalogApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,14 +11,12 @@ import { Switch } from "@/components/ui/switch";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Plus, Pencil, Trash2, Loader2, Scissors, ArrowLeft, GripVertical, History } from "lucide-react";
 import AdminHeader from "@/components/layout/AdminHeader";
-import { useAuth } from "@/lib/AuthContext";
 import { toast } from "sonner";
-import { clearServicesCache } from "@/hooks/useServices";
+import { extractError } from "@/lib/apiError";
 
-const EMPTY = { name: "", description: "", duration_minutes: 30, price: 10, active: true };
+const EMPTY = { name: "", description: "", durationMinutes: 30, price: 10, active: true };
 
 export default function ManageServices() {
-  const { user } = useAuth();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -34,8 +32,8 @@ export default function ManageServices() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const items = await base44.entities.Service.list("order");
-      setServices(items || []);
+      const res = await servicesApi.adminList();
+      setServices(res.services || []);
     } catch {
       setServices([]);
     } finally {
@@ -44,14 +42,12 @@ export default function ManageServices() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  if (user && user.role !== "admin") return <Navigate to="/" replace />;
-
   const openNew = () => { setEditing(null); setForm(EMPTY); setOpen(true); };
   const openEdit = (s) => { setEditing(s); setForm({ ...s }); setOpen(true); };
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!form.name || !form.duration_minutes || form.price == null) {
+    if (!form.name || !form.durationMinutes || form.price == null) {
       toast.error("Compila nome, durata e prezzo");
       return;
     }
@@ -60,34 +56,22 @@ export default function ManageServices() {
       const payload = {
         name: form.name,
         description: form.description || "",
-        duration_minutes: Number(form.duration_minutes),
+        durationMinutes: Number(form.durationMinutes),
         price: Number(form.price),
       };
       if (editing) {
-        const priceChanged = Number(editing.price) !== Number(payload.price);
-        const durChanged = Number(editing.duration_minutes) !== Number(payload.duration_minutes);
-        if (priceChanged || durChanged) {
-          await base44.entities.ServicePriceHistory.create({
-            service_id: editing.id,
-            service_name: editing.name,
-            previous_price: Number(editing.price),
-            previous_duration: Number(editing.duration_minutes),
-            new_price: Number(payload.price),
-            new_duration: Number(payload.duration_minutes),
-          }).catch(() => {});
-        }
-        await base44.entities.Service.update(editing.id, payload);
+        //Lo storico prezzo/durata viene registrato automaticamente dal backend se cambiano.
+        await servicesApi.adminUpdate(editing.id, payload);
         toast.success("Servizio aggiornato");
       } else {
-        const order = (services.length > 0) ? Math.max(...services.map((s) => s.order || 0)) + 1 : 0;
-        await base44.entities.Service.create({ ...payload, active: true, order });
+        const displayOrder = services.length > 0 ? Math.max(...services.map((s) => s.displayOrder || 0)) + 1 : 0;
+        await servicesApi.adminCreate({ ...payload, active: true, displayOrder });
         toast.success("Servizio creato");
       }
-      clearServicesCache();
       setOpen(false);
       await load();
     } catch (err) {
-      toast.error("Errore", { description: err.message });
+      toast.error("Errore", { description: extractError(err) });
     } finally {
       setSaving(false);
     }
@@ -101,11 +85,9 @@ export default function ManageServices() {
     setServices(reordered);
     setReordering(true);
     try {
-      const updates = reordered.map((s, i) => ({ id: s.id, order: i }));
-      await base44.entities.Service.bulkUpdate(updates);
-      clearServicesCache();
+      await servicesApi.adminReorder(reordered.map((s) => s.id));
     } catch (err) {
-      toast.error("Errore nel riordino");
+      toast.error("Errore nel riordino", { description: extractError(err) });
       await load();
     } finally {
       setReordering(false);
@@ -117,11 +99,10 @@ export default function ManageServices() {
     const prev = s.active;
     setServices((cur) => cur.map((x) => (x.id === s.id ? { ...x, active: next } : x)));
     try {
-      await base44.entities.Service.update(s.id, { active: next });
-      clearServicesCache();
+      await servicesApi.adminUpdate(s.id, { active: next });
     } catch (err) {
       setServices((cur) => cur.map((x) => (x.id === s.id ? { ...x, active: prev } : x)));
-      toast.error("Errore", { description: err.message });
+      toast.error("Errore", { description: extractError(err) });
     }
   };
 
@@ -129,13 +110,12 @@ export default function ManageServices() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await base44.entities.Service.delete(deleteTarget.id);
-      clearServicesCache();
+      await servicesApi.adminDelete(deleteTarget.id);
       toast.success("Servizio eliminato");
       setDeleteTarget(null);
       await load();
     } catch (err) {
-      toast.error("Errore", { description: err.message });
+      toast.error("Errore", { description: extractError(err) });
     } finally {
       setDeleting(false);
     }
@@ -145,8 +125,8 @@ export default function ManageServices() {
     setHistory({ service: s, items: [] });
     setHistoryLoading(true);
     try {
-      const items = await base44.entities.ServicePriceHistory.filter({ service_id: s.id }, "-created_date", 50);
-      setHistory({ service: s, items: items || [] });
+      const res = await servicesApi.adminPriceHistory(s.id);
+      setHistory({ service: s, items: res.history || [] });
     } catch {
       setHistory({ service: s, items: [] });
     } finally {
@@ -167,7 +147,10 @@ export default function ManageServices() {
           <div>
             <Button asChild variant="ghost" size="sm" className="mb-2 -ml-2 hidden md:inline-flex"><Link to="/admin"><ArrowLeft className="mr-2 h-4 w-4" /> Dashboard</Link></Button>
             <h1 className="font-heading text-3xl font-semibold tracking-tight">Gestione servizi</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Trascina le righe per modificare l'ordine nella home.</p>
+            <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+              Trascina le righe per modificare l'ordine nella home.
+              {reordering && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+            </p>
           </div>
           <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" /> Nuovo servizio</Button>
         </div>
@@ -182,7 +165,7 @@ export default function ManageServices() {
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-border bg-card">
             <DragDropContext onDragEnd={onDragEnd}>
-              <Droppable droppableId="services">
+              <Droppable droppableId="services" isDropDisabled={reordering}>
                 {(provided) => (
                   <table className="w-full min-w-[700px] text-sm" ref={provided.innerRef} {...provided.droppableProps}>
                     <thead className="bg-secondary/60 text-left text-xs uppercase text-muted-foreground">
@@ -207,7 +190,7 @@ export default function ManageServices() {
                                 <p className="font-medium">{s.name}</p>
                                 {s.description && <p className="text-xs text-muted-foreground">{s.description}</p>}
                               </td>
-                              <td className="px-4 py-3">{s.duration_minutes} min</td>
+                              <td className="px-4 py-3">{s.durationMinutes} min</td>
                               <td className="px-4 py-3 font-semibold">€{Number(s.price).toFixed(0)}</td>
                               <td className="px-4 py-3">
                                 <div className="flex items-center gap-2">
@@ -255,7 +238,7 @@ export default function ManageServices() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="dur">Durata (min)</Label>
-                <Input id="dur" type="number" min={15} step={15} value={form.duration_minutes} onChange={(e) => setForm({ ...form, duration_minutes: e.target.value })} required />
+                <Input id="dur" type="number" min={15} step={15} value={form.durationMinutes} onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="price">Prezzo (€)</Label>
@@ -283,12 +266,12 @@ export default function ManageServices() {
             <ul className="max-h-80 space-y-2 overflow-y-auto">
               {(history?.items || []).map((h) => (
                 <li key={h.id} className="rounded-xl border border-border bg-secondary/40 p-3 text-sm">
-                  <p className="font-medium">{fmtDate(h.created_date)}</p>
+                  <p className="font-medium">{fmtDate(h.changedAt)}</p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    Prezzo: <span className="font-medium text-foreground">€{Number(h.previous_price).toFixed(0)}</span> → <span className="font-medium text-primary">€{Number(h.new_price).toFixed(0)}</span>
+                    Prezzo: <span className="font-medium text-foreground">€{Number(h.previousPrice).toFixed(0)}</span> → <span className="font-medium text-primary">€{Number(h.newPrice).toFixed(0)}</span>
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Durata: <span className="font-medium text-foreground">{h.previous_duration} min</span> → <span className="font-medium text-primary">{h.new_duration} min</span>
+                    Durata: <span className="font-medium text-foreground">{h.previousDurationMinutes} min</span> → <span className="font-medium text-primary">{h.newDurationMinutes} min</span>
                   </p>
                 </li>
               ))}

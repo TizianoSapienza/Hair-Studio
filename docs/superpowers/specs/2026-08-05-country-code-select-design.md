@@ -13,8 +13,18 @@ medio-alta e senza rompere il contratto esistente con `Register.jsx` e
 
 ## Decisioni
 
-- **Copertura**: tutti i paesi supportati dalla libreria (~250), non una
-  lista curata.
+- **Copertura**: lista curata di ~85 paesi (tutta l'Europa + i principali
+  del resto del mondo), non tutti i ~250 supportati dalla libreria — un
+  dropdown con centinaia di micro-stati/territori poco rilevanti per la
+  clientela del salone è rumore, non valore. La lista di ISO da includere
+  è hardcoded (`CURATED_ISO` in `phoneCountries.js`), ma prefisso/nome/
+  bandiera restano sempre calcolati dalla libreria, non scritti a mano.
+  **Nota**: la copertura completa introduceva anche un bug reale, non solo
+  rumore — l'Italia (`+39`) condivide il prefisso con la Città del
+  Vaticano, quindi con tutti e 250 i paesi il valore di default
+  dell'app non mostrava alcuna bandiera (fallback 🌐 per prefisso
+  ambiguo). Escludendo il Vaticano dalla lista curata il caso
+  d'uso principale torna a mostrare la bandiera corretta.
 - **UX ricerca**: dropdown con campo di ricerca/filtro (nome, ISO,
   prefisso), non solo scroll.
 - **Bundle**: `libphonenumber-js/min` (~25-30KB gzip) va isolato in un
@@ -45,10 +55,16 @@ che oggi valida il prefisso contro l'array `COUNTRIES`.
 
 - `getPhoneCountries()`: array memoizzato (calcolato una sola volta a
   livello di modulo) di `{ iso, name, callingCode }`, costruito da:
+  - `CURATED_ISO`: lista hardcoded di ~85 codici ISO 3166-1 alpha-2
+    (tutta l'Europa + i principali paesi extra-UE) usata per filtrare
+    l'elenco mostrato
   - `getCountries()` e `getCountryCallingCode()` da `libphonenumber-js/min`
+    per validare quali ISO curati sono effettivamente supportati e per
+    calcolare il prefisso di ciascuno
   - `Intl.DisplayNames(['it'], { type: 'region' })` per il nome
     localizzato in italiano (nativo del browser, nessuna dipendenza)
-  - ordinamento alfabetico per nome
+  - Italia sempre in cima (mercato principale del salone), il resto in
+    ordine alfabetico per nome
 - `flagFromIso(iso)`: funzione pura, converte un codice ISO 3166-1
   alpha-2 nei due Regional Indicator Symbols Unicode corrispondenti. Non
   è una tabella dati: è un calcolo (`iso.toUpperCase()` → offset dai

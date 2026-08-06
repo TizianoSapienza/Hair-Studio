@@ -1,25 +1,11 @@
-import React, { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
+import React from "react";
+import { usePublicStaff } from "@/hooks/useServices";
 import { Image } from "@/components/ui/image";
 import { Loader2 } from "lucide-react";
 import Reveal from "./Reveal";
 
-const FALLBACK_PHOTOS = [
-  "https://images.unsplash.com/photo-1507003211169-0a7802279c92?auto=format&fit=crop&w=600&q=80",
-  "https://images.unsplash.com/photo-1494796508271-885835f27965?auto=format&fit=crop&w=600&q=80",
-  "https://images.unsplash.com/photo-1573496773877-9c5739276b0f?auto=format&fit=crop&w=600&q=80",
-];
-
 export default function EmployeesSection() {
-  const [team, setTeam] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    base44.functions.invoke("GetPublicSiteData")
-      .then((res) => setTeam(res.data?.staff || []))
-      .catch(() => setTeam([]))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: team = [], isLoading: loading } = usePublicStaff();
 
   if (!loading && team.length === 0) return null;
 
@@ -43,7 +29,7 @@ export default function EmployeesSection() {
                 <div className="group rounded-3xl border border-border bg-card p-3 text-center">
                   <div className="overflow-hidden rounded-2xl">
                     <Image
-                      src={m.photo_url || FALLBACK_PHOTOS[i % FALLBACK_PHOTOS.length]}
+                      src={m.photoUrl}
                       alt={m.name}
                       fittingType="fill"
                       className="aspect-[4/5] w-full object-cover object-top transition-transform duration-500 group-hover:scale-105"

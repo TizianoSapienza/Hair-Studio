@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
-import { Navigate, Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { homepageContentApi } from "@/api/contentApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,45 +9,37 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Save, Home, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import AdminHeader from "@/components/layout/AdminHeader";
-import { useAuth } from "@/lib/AuthContext";
+import { extractError } from "@/lib/apiError";
 
 const FIELDS = [
-  { key: "hero_title", label: "Hero — Titolo", type: "input" },
-  { key: "hero_subtitle", label: "Hero — Sottotitolo", type: "textarea" },
-  { key: "chi_siamo_titolo", label: "Chi siamo — Titolo", type: "input" },
-  { key: "chi_siamo_testo", label: "Chi siamo — Testo", type: "textarea" },
-  { key: "card1_numero", label: "Card 1 — Numero/Titolo", type: "input" },
-  { key: "card1_testo", label: "Card 1 — Descrizione", type: "input" },
-  { key: "card2_numero", label: "Card 2 — Numero/Titolo", type: "input" },
-  { key: "card2_testo", label: "Card 2 — Descrizione", type: "input" },
-  { key: "card3_numero", label: "Card 3 — Numero/Titolo", type: "input" },
-  { key: "card3_testo", label: "Card 3 — Descrizione", type: "input" },
-  { key: "footer_description", label: "Footer — Descrizione", type: "textarea" },
-  { key: "about_chi_siamo", label: "Pagina About — Chi siamo (presentazione, storia, stile)", type: "textarea" },
-  { key: "about_come_funziona", label: "Pagina About — Come funziona la prenotazione (app, operatore, calendario)", type: "textarea" },
-  { key: "about_team", label: "Pagina About — Il team (barbieri) + CTA Contatti", type: "textarea" },
+  { key: "heroTitle", label: "Hero — Titolo", type: "input" },
+  { key: "heroSubtitle", label: "Hero — Sottotitolo", type: "textarea" },
+  { key: "chiSiamoTitolo", label: "Chi siamo — Titolo", type: "input" },
+  { key: "chiSiamoTesto", label: "Chi siamo — Testo", type: "textarea" },
+  { key: "card1Numero", label: "Card 1 — Numero/Titolo", type: "input" },
+  { key: "card1Testo", label: "Card 1 — Descrizione", type: "input" },
+  { key: "card2Numero", label: "Card 2 — Numero/Titolo", type: "input" },
+  { key: "card2Testo", label: "Card 2 — Descrizione", type: "input" },
+  { key: "card3Numero", label: "Card 3 — Numero/Titolo", type: "input" },
+  { key: "card3Testo", label: "Card 3 — Descrizione", type: "input" },
+  { key: "footerDescription", label: "Footer — Descrizione", type: "textarea" },
+  { key: "aboutChiSiamo", label: "Pagina About — Chi siamo (presentazione, storia, stile)", type: "textarea" },
+  { key: "aboutComeFunziona", label: "Pagina About — Come funziona la prenotazione (app, operatore, calendario)", type: "textarea" },
+  { key: "aboutTeam", label: "Pagina About — Il team (barbieri) + CTA Contatti", type: "textarea" },
 ];
 
 export default function ManageHomeContent() {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
-  const [record, setRecord] = useState(null);
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    base44.entities.HomepageContent.list()
-      .then((items) => {
-        const rec = (items && items[0]) || null;
-        setRecord(rec);
-        setForm(rec || {});
-      })
+    homepageContentApi.adminGet()
+      .then((res) => setForm(res?.homepageContent || {}))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
-
-  if (user && user.role !== "admin") return <Navigate to="/admin" replace />;
 
   const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -55,21 +47,13 @@ export default function ManageHomeContent() {
     e.preventDefault();
     setSaving(true);
     try {
-      const payload = { ...form };
-      delete payload.id;
-      delete payload.created_date;
-      delete payload.updated_date;
-      delete payload.created_by_id;
-      if (record?.id) {
-        await base44.entities.HomepageContent.update(record.id, payload);
-      } else {
-        const created = await base44.entities.HomepageContent.create(payload);
-        setRecord(created);
-      }
+      const payload = {};
+      for (const f of FIELDS) payload[f.key] = form[f.key] || "";
+      await homepageContentApi.adminUpdate(payload);
       queryClient.invalidateQueries({ queryKey: ["homepage_content"] });
       toast.success("Contenuti salvati");
     } catch (err) {
-      toast.error("Errore nel salvataggio");
+      toast.error("Errore nel salvataggio", { description: extractError(err) });
     } finally {
       setSaving(false);
     }

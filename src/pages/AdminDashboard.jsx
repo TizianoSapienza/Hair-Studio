@@ -1,22 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { Link, Navigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { Link } from "react-router-dom";
+import { bookingsApi } from "@/api/bookingsApi";
 import { Button } from "@/components/ui/button";
 import { CalendarDays, LayoutDashboard, Scissors, Users, CheckCircle2, Ban, TrendingUp, Settings, Loader2, UserCircle2, CalendarClock, FileText } from "lucide-react";
 import AdminHeader from "@/components/layout/AdminHeader";
 import CalendarView from "@/components/booking/CalendarView";
-import { useAuth } from "@/lib/AuthContext";
-
-function toDateString(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
+import { useAdminEvents } from "@/hooks/useAdminEvents";
+import { toDateString } from "@/lib/dateUtils";
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const [date, setDate] = useState(today);
@@ -38,14 +31,15 @@ export default function AdminDashboard() {
       const lastDay = new Date(year, month + 1, 0).getDate();
       const monthEnd = `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
-      const [dayBookings, monthBookings] = await Promise.all([
-        base44.entities.Booking.filter({ date: selDateStr }, undefined, 200),
-        base44.entities.Booking.filter({ date: { $gte: monthStart, $lte: monthEnd } }, undefined, 1000),
+      const [dayBookings, monthStats] = await Promise.all([
+        bookingsApi.adminList({ date: selDateStr }),
+        bookingsApi.adminStats({ from: monthStart, to: monthEnd }),
       ]);
 
-      const todayCount = (dayBookings || []).filter((b) => b.status === "booked" || b.status === "confirmed" || b.status === "completed" || b.status === "no_show").length;
-      const completedMonth = (monthBookings || []).filter((b) => b.status === "completed" || b.status === "no_show").length;
-      const noShowMonth = (monthBookings || []).filter((b) => b.status === "no_show").length;
+      const countByStatus = (status) => (monthStats.byStatus || []).find((s) => s.status === status)?.count || 0;
+      const todayCount = (dayBookings.bookings || []).filter((b) => ["in_attesa", "confermata", "completata", "no_show"].includes(b.status)).length;
+      const completedMonth = countByStatus("completata") + countByStatus("no_show");
+      const noShowMonth = countByStatus("no_show");
 
       if (myId === statsIdRef.current) setStats({ today: todayCount, completedMonth, noShowMonth });
     } catch {
@@ -58,12 +52,7 @@ export default function AdminDashboard() {
   useEffect(() => { loadStats(); }, [loadStats, refreshKey]);
 
   // Aggiornamento real-time delle statistiche
-  useEffect(() => {
-    const unsub = base44.entities.Booking.subscribe(() => { setRefreshKey((k) => k + 1); });
-    return unsub;
-  }, []);
-
-  if (user && user.role !== "admin") return <Navigate to="/" replace />;
+  useAdminEvents(() => setRefreshKey((k) => k + 1));
 
   const STATS = [
     { label: "Oggi", value: stats.today, icon: CalendarDays, color: "text-primary", bg: "bg-primary/10" },

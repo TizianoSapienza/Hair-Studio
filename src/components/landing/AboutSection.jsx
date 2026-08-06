@@ -9,9 +9,9 @@ import useHomepageContent from "@/hooks/useHomepageContent";
 export default function AboutSection() {
   const { data: content } = useHomepageContent();
   const STATS = [
-    { icon: Users, label: content?.card1_numero || "3 barbieri", desc: content?.card1_testo || "Sempre al tuo servizio" },
-    { icon: Award, label: content?.card2_numero || "10+ anni", desc: content?.card2_testo || "Di esperienza" },
-    { icon: Sparkles, label: content?.card3_numero || "Taglio su misura", desc: content?.card3_testo || "Per ogni stile" },
+    { icon: Users, label: content?.card1Numero || "3 barbieri", desc: content?.card1Testo || "Sempre al tuo servizio" },
+    { icon: Award, label: content?.card2Numero || "10+ anni", desc: content?.card2Testo || "Di esperienza" },
+    { icon: Sparkles, label: content?.card3Numero || "Taglio su misura", desc: content?.card3Testo || "Per ogni stile" },
   ];
   return (
     <section id="chi-siamo" className="bg-secondary py-20">
@@ -31,10 +31,10 @@ export default function AboutSection() {
         <Reveal>
           <p className="text-sm font-semibold uppercase tracking-wider text-primary">Chi siamo</p>
           <h2 className="mt-2 font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
-            {content?.chi_siamo_titolo || "Un barbershop pensato per te"}
+            {content?.chiSiamoTitolo || "Un barbershop pensato per te"}
           </h2>
           <p className="mt-4 text-muted-foreground">
-            {content?.chi_siamo_testo || "Da Hair Studio uniamo tradizione e modernità in un ambiente curato e informale. Tre professionisti lavorano in parallelo per offrirti tempi brevi e qualità alta, senza mai rinunciare alla cura del dettaglio."}
+            {content?.chiSiamoTesto || "Da Hair Studio uniamo tradizione e modernità in un ambiente curato e informale. Tre professionisti lavorano in parallelo per offrirti tempi brevi e qualità alta, senza mai rinunciare alla cura del dettaglio."}
           </p>
           <div className="mt-6">
             <Button asChild variant="outline" size="sm">

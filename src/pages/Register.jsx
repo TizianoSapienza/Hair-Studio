@@ -1,18 +1,16 @@
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import { Link } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { useAuth } from "@/lib/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Skeleton } from "@/components/ui/skeleton";
 import { UserPlus, Mail, Lock, User, Phone, Loader2, Eye, EyeOff, Check, X } from "lucide-react";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import AuthLayout from "@/components/AuthLayout";
-import GoogleIcon from "@/components/GoogleIcon";
-import CountryCodeSelect, { splitPhone } from "@/components/profile/CountryCodeSelect";
-import { toast } from "sonner";
 import { safeReturnTo } from "@/lib/authReturnTo";
+import { PASSWORD_REGEX } from "@/lib/passwordRules";
 
-const PASSWORD_REGEX = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$/;
+const CountryCodeSelect = React.lazy(() => import("@/components/profile/CountryCodeSelect"));
 
 function Requirement({ ok, label }) {
   return (
@@ -24,6 +22,7 @@ function Requirement({ ok, label }) {
 }
 
 export default function Register() {
+  const { register } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [code, setCode] = useState("+39");
@@ -35,8 +34,6 @@ export default function Register() {
   const [showPwd2, setShowPwd2] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showOtp, setShowOtp] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
 
   const reqs = {
     len: password.length >= 8,
@@ -44,6 +41,8 @@ export default function Register() {
     number: /\d/.test(password),
     special: /[^A-Za-z\d]/.test(password),
   };
+
+  const returnTo = safeReturnTo();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -55,11 +54,21 @@ export default function Register() {
       return;
     }
     if (password !== confirmPassword) { setError("Le password non coincidono"); return; }
+
+    const num = phone.replace(/\s+/g, "").replace(/^(0+)/, "");
+    if (!num) { setError("Inserisci il numero di telefono"); return; }
+    const fullPhone = `${code} ${num}`;
+
     setLoading(true);
     try {
-      const fullName = `${firstName.trim()} ${lastName.trim()}`;
-      await base44.auth.register({ email, password, full_name: fullName });
-      setShowOtp(true);
+      await register({
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email,
+        phone: fullPhone,
+        password,
+      });
+      window.location.href = returnTo;
     } catch (err) {
       setError(err.message || "Registrazione fallita");
     } finally {
@@ -67,87 +76,13 @@ export default function Register() {
     }
   };
 
-  const handleVerify = async () => {
-    setError("");
-    setLoading(true);
-    try {
-      const result = await base44.auth.verifyOtp({ email, otpCode });
-      // Persisti il token di sessione. verifyOtp dovrebbe restituire access_token;
-      // in caso contrario, effettua il login ora che l'utente è verificato,
-      // per garantire che resti autenticato dopo il redirect.
-      let token = result?.access_token;
-      if (token) {
-        base44.auth.setToken(token);
-      } else {
-        const loginResult = await base44.auth.loginViaEmailPassword(email, password);
-        token = loginResult?.access_token;
-        if (token) base44.auth.setToken(token);
-      }
-      const fullName = `${firstName.trim()} ${lastName.trim()}`;
-      const num = phone.replace(/\s+/g, "").replace(/^(0+)/, "");
-      const fullPhone = num ? `${code} ${num}` : "";
-      try { await base44.auth.updateMe({ first_name: firstName.trim(), last_name: lastName.trim(), phone: fullPhone }); } catch (e) { /* non bloccante */ }
-      try { await base44.functions.invoke("SendRegistrationConfirmation", { email, name: fullName }); } catch (e) { /* non bloccante */ }
-      window.location.href = safeReturnTo();
-    } catch (err) {
-      setError(err.message || "Codice non valido");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleResend = async () => {
-    setError("");
-    try {
-      await base44.auth.resendOtp(email);
-      toast.success("Codice inviato", { description: "Controlla la tua email per il nuovo codice." });
-    } catch (err) {
-      setError(err.message || "Invio fallito");
-    }
-  };
-
-  const handleGoogle = () => {
-    base44.auth.loginWithProvider("google", safeReturnTo());
-  };
-
-  if (showOtp) {
-    return (
-      <AuthLayout icon={Mail} title="Verifica la tua email" subtitle={`Abbiamo inviato un codice a ${email}`}>
-        {error && <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
-        <div className="flex justify-center mb-6">
-          <InputOTP maxLength={6} value={otpCode} onChange={setOtpCode} autoFocus autoComplete="one-time-code">
-            <InputOTPGroup>
-              <InputOTPSlot index={0} /><InputOTPSlot index={1} /><InputOTPSlot index={2} />
-              <InputOTPSlot index={3} /><InputOTPSlot index={4} /><InputOTPSlot index={5} />
-            </InputOTPGroup>
-          </InputOTP>
-        </div>
-        <Button className="w-full h-12 font-medium" onClick={handleVerify} disabled={loading || otpCode.length < 6}>
-          {loading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Verifica in corso...</> : "Verifica"}
-        </Button>
-        <p className="text-center text-sm text-muted-foreground mt-4">
-          Non hai ricevuto il codice?{" "}
-          <button onClick={handleResend} className="text-primary font-medium hover:underline">Invia di nuovo</button>
-        </p>
-      </AuthLayout>
-    );
-  }
-
   return (
     <AuthLayout
       icon={UserPlus}
       title="Crea il tuo account cliente"
       subtitle="Registrati per prenotare il tuo appuntamento"
-      footer={<>Hai già un account? <Link to={"/login" + (safeReturnTo() !== "/" ? "?returnTo=" + encodeURIComponent(safeReturnTo()) : "")} className="text-primary font-medium hover:underline">Accedi</Link></>}
+      footer={<>Hai già un account? <Link to={"/login" + (returnTo !== "/" ? "?returnTo=" + encodeURIComponent(returnTo) : "")} className="text-primary font-medium hover:underline">Accedi</Link></>}
     >
-      <Button variant="outline" className="w-full h-12 text-sm font-medium mb-6" onClick={handleGoogle}>
-        <GoogleIcon className="w-5 h-5 mr-2" /> Continua con Google
-      </Button>
-      <div className="relative mb-6">
-        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
-        <div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-3 text-muted-foreground">oppure</span></div>
-      </div>
-
       {error && <div className="mb-4 p-3 rounded-lg bg-destructive/10 text-destructive text-sm">{error}</div>}
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -170,7 +105,9 @@ export default function Register() {
         <div className="space-y-2">
           <Label htmlFor="phone">Telefono</Label>
           <div className="flex gap-2">
-            <CountryCodeSelect value={code} onChange={setCode} triggerClassName="h-12" />
+            <Suspense fallback={<Skeleton className="h-12 w-[112px] shrink-0 rounded-md" />}>
+              <CountryCodeSelect value={code} onChange={setCode} triggerClassName="h-12" />
+            </Suspense>
             <div className="relative min-w-0 flex-1">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" aria-hidden="true" />
               <Input id="phone" type="tel" autoComplete="tel" placeholder="333 1234567" value={phone} onChange={(e) => setPhone(e.target.value)} className="pl-10 h-12" required />
