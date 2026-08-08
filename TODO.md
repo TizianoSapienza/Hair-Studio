@@ -2,8 +2,9 @@
 
 ## Sicurezza / configurazione
 
-- [ ] **Restringere la Firebase Web API key** (`src/lib/firebase.js`, `public/firebase-messaging-sw.js`,
-  progetto Google `hair-studio-331f8`): in Google Cloud Console → Credentials, applicare
+- [ ] **Restringere la Firebase Web API key** (ora in `VITE_FIREBASE_*` nel `.env`, vedi
+  `.env.example` e `src/lib/firebase.js`; progetto Google `hair-studio-331f8`): in Google
+  Cloud Console → Credentials, applicare
   alla chiave browser una restrizione "HTTP referrers" limitata al dominio di produzione
   (es. `https://hairstudio.it/*`, `https://www.hairstudio.it/*`). Finché il dominio non è
   deciso la chiave resta senza restrizioni: rischio basso (non protegge dati dell'app, che

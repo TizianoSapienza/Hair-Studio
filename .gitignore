@@ -29,6 +29,5 @@ dist-ssr
 *.sln
 *.sw?
 
-.env
 .vite
-base44/.app.jsonc
+docs
