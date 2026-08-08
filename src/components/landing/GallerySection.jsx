@@ -13,7 +13,6 @@ export default function GallerySection() {
     <section id="galleria" className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
       <Reveal>
         <div className="text-center">
-          <p className="text-sm font-semibold uppercase tracking-wider text-primary">Galleria</p>
           <h2 className="mt-2 font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
             L'atmosfera del salone
           </h2>

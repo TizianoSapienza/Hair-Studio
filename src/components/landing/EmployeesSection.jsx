@@ -14,7 +14,6 @@ export default function EmployeesSection() {
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <Reveal>
           <div className="text-center">
-            <p className="text-sm font-semibold uppercase tracking-wider text-primary">Il nostro team</p>
             <h2 className="mt-2 font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
               I nostri professionisti al tuo servizio
             </h2>

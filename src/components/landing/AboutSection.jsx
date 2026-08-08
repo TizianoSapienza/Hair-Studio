@@ -29,7 +29,6 @@ export default function AboutSection() {
           </div>
         </Reveal>
         <Reveal>
-          <p className="text-sm font-semibold uppercase tracking-wider text-primary">Chi siamo</p>
           <h2 className="mt-2 font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
             {content?.chiSiamoTitolo || "Un barbershop pensato per te"}
           </h2>
@@ -44,7 +43,7 @@ export default function AboutSection() {
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             {STATS.map((s) => (
               <div key={s.label} className="rounded-2xl border border-border bg-card p-4">
-                <s.icon className="h-6 w-6 text-primary" />
+                <s.icon className="h-6 w-6 text-foreground/60" />
                 <p className="mt-3 font-heading text-base font-semibold">{s.label}</p>
                 <p className="text-sm text-muted-foreground">{s.desc}</p>
               </div>

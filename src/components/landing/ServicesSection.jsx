@@ -12,7 +12,7 @@ export default function ServicesSection() {
     <section id="servizi" className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
       <Reveal>
         <div className="text-center">
-          <p className="text-sm font-semibold uppercase tracking-wider text-primary">I nostri servizi</p>
+          <p className="text-sm font-semibold uppercase tracking-wider text-primary-ink">I nostri servizi</p>
           <h2 className="mt-2 font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
             Cura per ogni dettaglio
           </h2>
@@ -47,7 +47,7 @@ export default function ServicesSection() {
               </div>
               {s.description && <p className="mt-2 text-sm text-muted-foreground">{s.description}</p>}
               <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4 text-brand" />
+                <Clock className="h-4 w-4 text-foreground/60" />
                 {formatDuration(s.durationMinutes)}
               </div>
             </motion.div>
