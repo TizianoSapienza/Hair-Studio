@@ -1,12 +1,13 @@
 import React from "react";
 import { Clock, Euro } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import useServices from "@/hooks/useServices";
 import { formatDuration } from "@/lib/format";
 import Reveal from "./Reveal";
 
 export default function ServicesSection() {
   const { data: services = [], isLoading: loading } = useServices();
+  const shouldReduceMotion = useReducedMotion();
 
   return (
     <section id="servizi" className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
@@ -33,10 +34,10 @@ export default function ServicesSection() {
           {services.map((s, i) => (
             <motion.div
               key={s.id}
-              initial={{ opacity: 0, y: 24 }}
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
-              transition={{ duration: 0.5, delay: (i % 3) * 0.08 }}
+              transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.5, delay: (i % 3) * 0.08 }}
               className="group rounded-2xl border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:border-primary/50 hover:shadow-lg"
             >
               <div className="flex items-start justify-between">
