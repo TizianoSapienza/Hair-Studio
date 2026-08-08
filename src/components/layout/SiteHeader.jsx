@@ -41,7 +41,7 @@ export default function SiteHeader({ minimal = false }) {
         </div>
 
         {/* Desktop nav */}
-        <div className="hidden items-center gap-1 md:flex">
+        <div className="hidden items-center gap-1.5 md:flex">
           <ThemeToggle />
           {isAuthenticated && <NotificationBell />}
           {!minimal && (
@@ -83,10 +83,10 @@ export default function SiteHeader({ minimal = false }) {
                 <Button variant="ghost" size="sm" asChild>
                   <Link to="/login"><UserIcon className="mr-2 h-4 w-4" />Accedi</Link>
                 </Button>
-                <Button variant="outline" size="sm" asChild>
+                <Button variant="ghost" size="sm" className="hidden lg:inline-flex" asChild>
                   <Link to="/register">Registrati</Link>
                 </Button>
-                <Button size="sm" className="hidden lg:inline-flex" asChild>
+                <Button size="sm" asChild>
                   <Link to="/prenota">Prenota ora</Link>
                 </Button>
               </>
@@ -95,7 +95,7 @@ export default function SiteHeader({ minimal = false }) {
         </div>
 
         {/* Mobile: hamburger con nav pubblica + azioni account */}
-        <div className="flex items-center gap-2 md:hidden">
+        <div className="flex items-center gap-2 md:hidden [&>button]:h-11 [&>button]:w-11">
           <ThemeToggle />
           {isAuthenticated && <NotificationBell />}
           {!minimal && (
