@@ -40,9 +40,9 @@ export default function AboutSection() {
               <Link to="/about">Scopri di più <ArrowRight className="ml-2 h-4 w-4" /></Link>
             </Button>
           </div>
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
+          <div className="mt-8 grid divide-y divide-border border-t border-border sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:border-t-0">
             {STATS.map((s) => (
-              <div key={s.label} className="rounded-2xl border border-border bg-card p-4">
+              <div key={s.label} className="py-4 first:pt-0 sm:px-5 sm:py-0 sm:first:pl-0 sm:first:pt-0">
                 <s.icon className="h-6 w-6 text-foreground/60" />
                 <p className="mt-3 font-heading text-base font-semibold">{s.label}</p>
                 <p className="text-sm text-muted-foreground">{s.desc}</p>

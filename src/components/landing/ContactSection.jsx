@@ -59,14 +59,14 @@ export default function ContactSection() {
                 <p className="break-all text-sm text-muted-foreground">{email}</p>
               </div>
             </div>
-            <div className="rounded-2xl border border-border bg-card p-5">
+            <div className="border-t border-border pt-5">
               <div className="flex items-center gap-2">
                 <Clock className="h-5 w-5 text-foreground/60" />
                 <h3 className="font-semibold">Orari di apertura</h3>
               </div>
-              <ul className="mt-3 space-y-1.5">
+              <ul className="mt-3 divide-y divide-border">
                 {orari.map((row) => (
-                  <li key={row.giorno} className="flex items-center justify-between text-sm">
+                  <li key={row.giorno} className="flex items-center justify-between py-1.5 text-sm">
                     <span className="text-muted-foreground">{row.giorno}</span>
                     <span className={row.chiuso ? "text-destructive" : "font-medium text-foreground"}>
                       {row.chiuso ? "Chiuso" : row.orario}
