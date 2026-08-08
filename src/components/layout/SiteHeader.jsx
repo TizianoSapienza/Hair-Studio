@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, LogOut, User as UserIcon, UserCircle, Home, ArrowLeft, CalendarDays } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetClose } from "@/components/ui/sheet";
+import { LayoutDashboard, LogOut, User as UserIcon, UserCircle, Home, ArrowLeft, CalendarDays, Menu } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import Logo from "@/components/Logo";
 import ThemeToggle from "@/components/ThemeToggle";
@@ -18,6 +19,7 @@ export default function SiteHeader({ minimal = false }) {
   const { isAuthenticated, user, logout } = useAuth();
   const navigate = useNavigate();
   const isAdmin = isAuthenticated && user?.role === "admin";
+  const [navOpen, setNavOpen] = useState(false);
 
   const handleLogout = () => {
     logout(false);
@@ -39,7 +41,7 @@ export default function SiteHeader({ minimal = false }) {
         </div>
 
         {/* Desktop nav */}
-        <div className="hidden items-center gap-1 md:flex">
+        <div className="hidden items-center gap-1.5 md:flex">
           <ThemeToggle />
           {isAuthenticated && <NotificationBell />}
           {!minimal && (
@@ -81,10 +83,10 @@ export default function SiteHeader({ minimal = false }) {
                 <Button variant="ghost" size="sm" asChild>
                   <Link to="/login"><UserIcon className="mr-2 h-4 w-4" />Accedi</Link>
                 </Button>
-                <Button variant="outline" size="sm" asChild>
+                <Button variant="ghost" size="sm" className="hidden lg:inline-flex" asChild>
                   <Link to="/register">Registrati</Link>
                 </Button>
-                <Button size="sm" className="hidden lg:inline-flex" asChild>
+                <Button size="sm" asChild>
                   <Link to="/prenota">Prenota ora</Link>
                 </Button>
               </>
@@ -92,25 +94,65 @@ export default function SiteHeader({ minimal = false }) {
           )}
         </div>
 
-        {/* Mobile: solo logout (o login/register se non autenticato) */}
-        <div className="flex items-center gap-1 md:hidden">
+        {/* Mobile: hamburger con nav pubblica + azioni account */}
+        <div className="flex items-center gap-2 md:hidden [&>button]:h-11 [&>button]:min-w-11">
           <ThemeToggle />
           {isAuthenticated && <NotificationBell />}
-          {isAuthenticated ? (
+          {!minimal && (
+            <Sheet open={navOpen} onOpenChange={setNavOpen}>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-11 w-11" aria-label="Apri il menu">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="flex w-4/5 flex-col gap-6">
+                <SheetTitle className="text-left font-heading">Menu</SheetTitle>
+                <nav className="flex flex-col gap-1">
+                  {NAV_LINKS.map((l) => (
+                    <SheetClose asChild key={l.href}>
+                      <a
+                        href={l.href}
+                        className="rounded-md px-3 py-3 text-base font-medium text-foreground transition-colors hover:bg-accent"
+                      >
+                        {l.label}
+                      </a>
+                    </SheetClose>
+                  ))}
+                </nav>
+                <div className="mt-auto flex flex-col gap-2">
+                  {isAuthenticated ? (
+                    <SheetClose asChild>
+                      <Button variant="outline" onClick={handleLogout} className="h-11 justify-start">
+                        <LogOut className="mr-2 h-4 w-4" />Logout
+                      </Button>
+                    </SheetClose>
+                  ) : (
+                    <>
+                      <SheetClose asChild>
+                        <Button asChild size="lg" className="h-11">
+                          <Link to="/prenota">Prenota ora</Link>
+                        </Button>
+                      </SheetClose>
+                      <SheetClose asChild>
+                        <Button variant="outline" asChild className="h-11">
+                          <Link to="/login">Accedi</Link>
+                        </Button>
+                      </SheetClose>
+                      <SheetClose asChild>
+                        <Button variant="ghost" asChild className="h-11">
+                          <Link to="/register">Registrati</Link>
+                        </Button>
+                      </SheetClose>
+                    </>
+                  )}
+                </div>
+              </SheetContent>
+            </Sheet>
+          )}
+          {minimal && isAuthenticated && (
             <Button variant="ghost" size="sm" onClick={handleLogout} aria-label="Logout">
               <LogOut className="mr-2 h-4 w-4" />Logout
             </Button>
-          ) : (
-            !minimal && (
-              <>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link to="/login">Accedi</Link>
-                </Button>
-                <Button variant="outline" size="sm" asChild>
-                  <Link to="/register">Registrati</Link>
-                </Button>
-              </>
-            )
           )}
         </div>
       </div>

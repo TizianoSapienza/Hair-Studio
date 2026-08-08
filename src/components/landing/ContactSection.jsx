@@ -27,7 +27,7 @@ export default function ContactSection() {
     <section id="contatti" className="py-20">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <div className="text-center">
-          <p className="text-sm font-semibold uppercase tracking-wider text-primary">Contatti</p>
+          <p className="text-sm font-semibold uppercase tracking-wider text-primary-ink">Contatti</p>
           <h2 className="mt-2 font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
             Vieni a trovarci
           </h2>
@@ -37,7 +37,7 @@ export default function ContactSection() {
           <Reveal className="space-y-5">
             <div className="rounded-2xl border border-border bg-card p-5">
               <div className="flex items-start gap-3">
-                <MapPin className="mt-0.5 h-5 w-5 text-primary" />
+                <MapPin className="mt-0.5 h-5 w-5 text-foreground/60" />
                 <div>
                   <h3 className="font-semibold">Indirizzo</h3>
                   <p className="text-sm text-muted-foreground">{address}</p>
@@ -49,24 +49,24 @@ export default function ContactSection() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-2xl border border-border bg-card p-5">
-                <Phone className="h-5 w-5 text-primary" />
+                <Phone className="h-5 w-5 text-foreground/60" />
                 <h3 className="mt-2 font-semibold">Telefono</h3>
                 <p className="text-sm text-muted-foreground">{phone}</p>
               </div>
               <div className="rounded-2xl border border-border bg-card p-5">
-                <Mail className="h-5 w-5 text-primary" />
+                <Mail className="h-5 w-5 text-foreground/60" />
                 <h3 className="mt-2 font-semibold">Email</h3>
                 <p className="break-all text-sm text-muted-foreground">{email}</p>
               </div>
             </div>
-            <div className="rounded-2xl border border-border bg-card p-5">
+            <div className="border-t border-border pt-5">
               <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-primary" />
+                <Clock className="h-5 w-5 text-foreground/60" />
                 <h3 className="font-semibold">Orari di apertura</h3>
               </div>
-              <ul className="mt-3 space-y-1.5">
+              <ul className="mt-3 divide-y divide-border">
                 {orari.map((row) => (
-                  <li key={row.giorno} className="flex items-center justify-between text-sm">
+                  <li key={row.giorno} className="flex items-center justify-between py-1.5 text-sm">
                     <span className="text-muted-foreground">{row.giorno}</span>
                     <span className={row.chiuso ? "text-destructive" : "font-medium text-foreground"}>
                       {row.chiuso ? "Chiuso" : row.orario}

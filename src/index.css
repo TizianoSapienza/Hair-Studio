@@ -11,6 +11,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 3.9%;
     --primary: 36 74% 48%;
+    --primary-ink: 36 74% 32%;
     --primary-foreground: 0 0% 100%;
     --secondary: 220 8% 91%;
     --secondary-foreground: 30 15% 15%;
@@ -31,9 +32,9 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-    --font-heading: ui-sans-serif, system-ui, sans-serif;
-    --font-body: ui-sans-serif, system-ui, sans-serif;
-    --font-display: ui-sans-serif, system-ui, sans-serif;
+    --font-heading: "Bodoni Moda", ui-serif, Georgia, serif;
+    --font-body: "Manrope", ui-sans-serif, system-ui, sans-serif;
+    --font-display: "Bodoni Moda", ui-serif, Georgia, serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -53,6 +54,7 @@
     --popover: 0 0% 13%;
     --popover-foreground: 0 0% 98%;
     --primary: 36 88% 60%;
+    --primary-ink: 36 88% 60%;
     --primary-foreground: 0 0% 100%;
     --secondary: 0 0% 18%;
     --secondary-foreground: 0 0% 98%;
@@ -119,6 +121,15 @@
   .no-select {
     -webkit-user-select: none;
     user-select: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 

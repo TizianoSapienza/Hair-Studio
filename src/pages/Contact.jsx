@@ -24,33 +24,34 @@ export default function Contact() {
       <SeoJsonLd title="Contatti | Hair Studio Mascalucia" description="Contatta Hair Studio a Mascalucia: indirizzo, telefono, email e Instagram. Prenota online il tuo appuntamento." />
       <SiteHeader minimal />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-16 sm:px-6">
-        <h1 className="font-heading text-4xl font-semibold tracking-tight">Contatti</h1>
+        <p className="text-sm font-semibold uppercase tracking-wider text-primary-ink">Contatti</p>
+        <h1 className="mt-2 font-heading text-4xl font-semibold tracking-tight">Parliamone</h1>
         <p className="mt-3 text-muted-foreground">
-          Hai domande o vuoi prenotare un appuntamento? Ecco come raggiungerci.
+          Hai domande o vuoi prenotare un appuntamento? Ecco come raggiungerci direttamente.
         </p>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
           <a href={mapsUrl} target="_blank" rel="noreferrer" className="rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/50">
-            <MapPin className="h-5 w-5 text-primary" />
+            <MapPin className="h-5 w-5 text-foreground/60" />
             <h2 className="mt-2 font-semibold">Indirizzo</h2>
             <p className="mt-1 text-sm text-muted-foreground">{address}</p>
             <p className="mt-2 text-sm font-medium text-brand">Apri in Google Maps →</p>
           </a>
           <a href={`tel:${phone}`} className="rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/50">
-            <Phone className="h-5 w-5 text-primary" />
+            <Phone className="h-5 w-5 text-foreground/60" />
             <h2 className="mt-2 font-semibold">Telefono</h2>
             <p className="mt-1 text-sm text-muted-foreground">{phone}</p>
           </a>
           {email && (
             <a href={`mailto:${email}`} className="rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/50">
-              <Mail className="h-5 w-5 text-primary" />
+              <Mail className="h-5 w-5 text-foreground/60" />
               <h2 className="mt-2 font-semibold">Email</h2>
               <p className="mt-1 break-all text-sm text-muted-foreground">{email}</p>
             </a>
           )}
           {instagram && (
             <a href={instagram} target="_blank" rel="noreferrer" className="rounded-2xl border border-border bg-card p-5 transition-colors hover:border-primary/50">
-              <Instagram className="h-5 w-5 text-primary" />
+              <Instagram className="h-5 w-5 text-foreground/60" />
               <h2 className="mt-2 font-semibold">Instagram</h2>
               <p className="mt-1 text-sm text-muted-foreground">Seguici su Instagram</p>
             </a>
