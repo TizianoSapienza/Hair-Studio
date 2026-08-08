@@ -95,7 +95,7 @@ export default function SiteHeader({ minimal = false }) {
         </div>
 
         {/* Mobile: hamburger con nav pubblica + azioni account */}
-        <div className="flex items-center gap-2 md:hidden [&>button]:h-11 [&>button]:w-11">
+        <div className="flex items-center gap-2 md:hidden [&>button]:h-11 [&>button]:min-w-11">
           <ThemeToggle />
           {isAuthenticated && <NotificationBell />}
           {!minimal && (
