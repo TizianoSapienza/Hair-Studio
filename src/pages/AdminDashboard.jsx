@@ -3,8 +3,9 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { Link } from "react-router-dom";
 import { bookingsApi } from "@/api/bookingsApi";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, LayoutDashboard, Scissors, Users, CheckCircle2, Ban, TrendingUp, Settings, Loader2, UserCircle2, CalendarClock, FileText } from "lucide-react";
+import { CalendarDays, LayoutDashboard, Scissors, Users, CheckCircle2, Ban, TrendingUp, Settings, UserCircle2, CalendarClock, FileText } from "lucide-react";
 import AdminHeader from "@/components/layout/AdminHeader";
+import { Skeleton } from "@/components/ui/skeleton";
 import CalendarView from "@/components/booking/CalendarView";
 import { useAdminEvents } from "@/hooks/useAdminEvents";
 import { toDateString } from "@/lib/dateUtils";
@@ -51,7 +52,7 @@ export default function AdminDashboard() {
 
   useEffect(() => { loadStats(); }, [loadStats, refreshKey]);
 
-  // Aggiornamento real-time delle statistiche
+  //Aggiornamento real-time delle statistiche
   useAdminEvents(() => setRefreshKey((k) => k + 1));
 
   const STATS = [
@@ -91,7 +92,7 @@ export default function AdminDashboard() {
                 </div>
                 <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
               </div>
-              {loadingStats && !hasLoaded ? <Loader2 className="mt-3 h-6 w-6 animate-spin text-muted-foreground" /> : <p className={`mt-3 font-heading text-2xl font-semibold ${loadingStats ? "opacity-60" : ""}`}>{s.value}</p>}
+              {loadingStats && !hasLoaded ? <Skeleton className="mt-3 h-8 w-12" /> : <p className={`mt-3 font-heading text-2xl font-semibold ${loadingStats ? "opacity-60" : ""}`}>{s.value}</p>}
             </div>
           ))}
         </div>

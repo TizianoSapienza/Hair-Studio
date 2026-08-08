@@ -11,3 +11,4 @@ export const unauthorized = (message = "Non autenticato") => new AppError(401, m
 export const forbidden = (message = "Non autorizzato") => new AppError(403, message);
 export const notFound = (message = "Risorsa non trovata") => new AppError(404, message);
 export const conflict = (message) => new AppError(409, message);
+export const tooManyRequests = (message = "Troppi tentativi, riprova più tardi") => new AppError(429, message);

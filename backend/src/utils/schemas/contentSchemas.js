@@ -17,9 +17,9 @@ const optionalUrl = z.preprocess(
 const optionalEmail = z.preprocess((v) => (v === "" ? undefined : v), z.string().email().optional());
 
 export const businessInfoSchema = z.object({
-  businessName: z.string().trim().min(1),
-  address: z.string().trim().min(1),
-  phone: z.string().trim().min(1),
+  businessName: z.string().trim().min(1).max(200),
+  address: z.string().trim().min(1).max(300),
+  phone: z.string().trim().min(1).max(30),
   email: optionalEmail,
   instagramUrl: optionalUrl,
   facebookUrl: optionalUrl,
@@ -29,28 +29,32 @@ export const businessInfoSchema = z.object({
   openingHoursDisplay: z
     .array(
       z.object({
-        giorno: z.string(),
-        orario: z.string().optional(),
+        giorno: z.string().max(50),
+        orario: z.string().max(100).optional(),
         chiuso: z.boolean().optional(),
-        noteOrari: z.string().optional(),
+        noteOrari: z.string().max(200).optional(),
       })
     )
+    .max(7)
     .optional(),
 });
 
+const shortText = z.string().max(300).optional();
+const longText = z.string().max(5000).optional();
+
 export const homepageContentSchema = z.object({
-  heroTitle: z.string().optional(),
-  heroSubtitle: z.string().optional(),
-  chiSiamoTitolo: z.string().optional(),
-  chiSiamoTesto: z.string().optional(),
-  card1Numero: z.string().optional(),
-  card1Testo: z.string().optional(),
-  card2Numero: z.string().optional(),
-  card2Testo: z.string().optional(),
-  card3Numero: z.string().optional(),
-  card3Testo: z.string().optional(),
-  footerDescription: z.string().optional(),
-  aboutChiSiamo: z.string().optional(),
-  aboutComeFunziona: z.string().optional(),
-  aboutTeam: z.string().optional(),
+  heroTitle: shortText,
+  heroSubtitle: shortText,
+  chiSiamoTitolo: shortText,
+  chiSiamoTesto: longText,
+  card1Numero: z.string().max(20).optional(),
+  card1Testo: shortText,
+  card2Numero: z.string().max(20).optional(),
+  card2Testo: shortText,
+  card3Numero: z.string().max(20).optional(),
+  card3Testo: shortText,
+  footerDescription: longText,
+  aboutChiSiamo: longText,
+  aboutComeFunziona: longText,
+  aboutTeam: longText,
 });

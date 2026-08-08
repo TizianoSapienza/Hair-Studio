@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { bookingsApi } from "@/api/bookingsApi";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarDays, Ban, Loader2, Scissors, Clock } from "lucide-react";
 import SiteHeader from "@/components/layout/SiteHeader";
 import { toast } from "sonner";
@@ -51,7 +52,18 @@ export default function MyBookings() {
         </div>
 
         {loading ? (
-            <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            <ul className="space-y-3">
+              {[0, 1, 2].map((i) => (
+                <li key={i} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-5">
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-40" />
+                    <Skeleton className="h-4 w-56" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                  <Skeleton className="h-9 w-24 rounded-full" />
+                </li>
+              ))}
+            </ul>
           ) : upcoming.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center">
               <Scissors className="mx-auto h-10 w-10 text-muted-foreground" />
