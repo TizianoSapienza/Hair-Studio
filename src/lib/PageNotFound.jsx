@@ -1,5 +1,7 @@
-import { useLocation } from 'react-router-dom';
+import { useLocation, Link } from 'react-router-dom';
+import { Home } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
+import { Button } from '@/components/ui/button';
 
 
 export default function PageNotFound({}) {
@@ -8,55 +10,49 @@ export default function PageNotFound({}) {
     const { user, isAuthenticated, authChecked } = useAuth();
     const authData = { user, isAuthenticated };
     const isFetched = authChecked;
-    
+
     return (
-        <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50">
+        <div className="min-h-screen flex items-center justify-center p-6 bg-background">
             <div className="max-w-md w-full">
                 <div className="text-center space-y-6">
                     {/* Errore 404*/}
                     <div className="space-y-2">
-                        <h1 className="text-7xl font-light text-slate-300">404</h1>
-                        <div className="h-0.5 w-16 bg-slate-200 mx-auto"></div>
+                        <h1 className="text-7xl font-light text-muted-foreground">404</h1>
+                        <div className="h-0.5 w-16 bg-border mx-auto"></div>
                     </div>
-                    
+
                     {/* Messaggio Principale */}
                     <div className="space-y-3">
-                        <h2 className="text-2xl font-medium text-slate-800">
+                        <h2 className="text-2xl font-medium text-foreground">
                             Pagina non trovata
                         </h2>
-                        <p className="text-slate-600 leading-relaxed">
-                            La pagina <span className="font-medium text-slate-700">"{pageName}"</span> non è stata trovata in questa applicazione.
+                        <p className="text-muted-foreground leading-relaxed">
+                            La pagina <span className="font-medium text-foreground">"{pageName}"</span> non è stata trovata in questa applicazione.
                         </p>
                     </div>
-                    
+
                     {/* Note per l'admin */}
                     {isFetched && authData.isAuthenticated && authData.user?.role === 'admin' && (
-                        <div className="mt-8 p-4 bg-slate-100 rounded-lg border border-slate-200">
+                        <div className="mt-8 p-4 bg-muted rounded-lg border border-border">
                             <div className="flex items-start space-x-3">
-                                <div className="flex-shrink-0 w-5 h-5 rounded-full bg-orange-100 flex items-center justify-center mt-0.5">
-                                    <div className="w-2 h-2 rounded-full bg-orange-400"></div>
+                                <div className="flex-shrink-0 w-5 h-5 rounded-full bg-warning-soft flex items-center justify-center mt-0.5">
+                                    <div className="w-2 h-2 rounded-full bg-warning"></div>
                                 </div>
                                 <div className="text-left space-y-1">
-                                    <p className="text-sm font-medium text-slate-700">Note per l'admin</p>
-                                    <p className="text-sm text-slate-600 leading-relaxed">
+                                    <p className="text-sm font-medium text-foreground">Note per l'admin</p>
+                                    <p className="text-sm text-muted-foreground leading-relaxed">
                                         Questa pagina non esiste. Controlla che il percorso sia corretto o che la pagina sia stata rimossa.
                                     </p>
                                 </div>
                             </div>
                         </div>
                     )}
-                    
+
                     {/* Action Button */}
                     <div className="pt-6">
-                        <button 
-                            onClick={() => window.location.href = '/'} 
-                            className="inline-flex items-center px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:border-slate-300 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500"
-                        >
-                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                            </svg>
-                            Torna alla home
-                        </button>
+                        <Button variant="outline" asChild>
+                            <Link to="/"><Home className="mr-2 h-4 w-4" />Torna alla home</Link>
+                        </Button>
                     </div>
                 </div>
             </div>

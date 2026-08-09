@@ -88,13 +88,13 @@ export default function MyBookings() {
                   </div>
                   <div className="flex flex-col items-end gap-2">
                     {b.status === "in_attesa" && (
-                      <span className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-200">In attesa</span>
+                      <span className="inline-flex items-center rounded-full bg-warning-soft px-3 py-1.5 text-xs font-medium text-warning-soft-foreground">In attesa</span>
                     )}
                     {b.status === "confermata" && (
-                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">Confermata</span>
+                      <span className="inline-flex items-center rounded-full bg-info-soft px-3 py-1.5 text-xs font-medium text-info-soft-foreground">Confermata</span>
                     )}
                     {b.status === "completata" && (
-                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">Completato</span>
+                      <span className="inline-flex items-center rounded-full bg-success-soft px-3 py-1.5 text-xs font-medium text-success-soft-foreground">Completato</span>
                     )}
                     {b.status !== "completata" && (
                       <Button variant="outline" onClick={() => cancelMutation.mutate(b.id)} disabled={cancelMutation.isPending && cancelMutation.variables === b.id}>

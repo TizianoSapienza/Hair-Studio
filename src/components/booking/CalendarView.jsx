@@ -45,9 +45,9 @@ function nowTimeStr() {
 const OCCUPYING_STATUSES = new Set(["in_attesa", "confermata", "blocked"]);
 
 const STATUS_STYLE = {
-  free: { dot: "bg-emerald-500", label: "Libero", chip: "bg-emerald-50 text-emerald-700" },
-  partial: { dot: "bg-amber-500", label: "In parte", chip: "bg-amber-50 text-amber-700" },
-  full: { dot: "bg-red-500", label: "Occupato", chip: "bg-red-50 text-red-700" },
+  free: { dot: "bg-success", label: "Libero", chip: "bg-success-soft text-success-soft-foreground" },
+  partial: { dot: "bg-warning", label: "In parte", chip: "bg-warning-soft text-warning-soft-foreground" },
+  full: { dot: "bg-destructive", label: "Occupato", chip: "bg-destructive-soft text-destructive-soft-foreground" },
   closed: { dot: "bg-muted-foreground", label: "Chiuso", chip: "bg-muted text-muted-foreground" }
 };
 
@@ -255,7 +255,7 @@ export default function CalendarView({
     const onNoShow = () => runAction("noshow-" + b.id, () => bookingsApi.adminNoShow(b.id), opts);
     const onConfirm = () => runAction("confirm-" + b.id, () => bookingsApi.adminConfirm(b.id), opts);
     return (
-      <li key={b.id} className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3 ${noShow ? "border-red-400/70 bg-red-50/70 dark:border-red-600/50 dark:bg-red-950/50" : "border-border bg-secondary/40"} ${completed || cancelled ? "opacity-60" : ""}`}>
+      <li key={b.id} className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3 ${noShow ? "border-destructive/40 bg-destructive-soft" : "border-border bg-secondary/40"} ${completed || cancelled ? "opacity-60" : ""}`}>
         <div className="flex min-w-0 items-start gap-3">
           {(pending || confirmed) && (
             <Checkbox checked={selected.has(b.id)} onCheckedChange={() => toggleSelect(b.id)} className="mt-1" />
@@ -275,27 +275,27 @@ export default function CalendarView({
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {pending && (
-            <span className="inline-flex items-center rounded-full bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-200">
+            <span className="status-badge-in inline-flex items-center rounded-full bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning-soft-foreground">
               <Clock className="mr-1 h-3.5 w-3.5" /> In attesa
             </span>
           )}
           {confirmed && (
-            <span className="inline-flex items-center rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/40 dark:text-blue-200">
+            <span className="status-badge-in inline-flex items-center rounded-full bg-info-soft px-2.5 py-1 text-xs font-medium text-info-soft-foreground">
               <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Confermata
             </span>
           )}
           {completed && (
-            <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700">
+            <span className="status-badge-in inline-flex items-center rounded-full bg-success-soft px-2.5 py-1 text-xs font-medium text-success-soft-foreground">
               <Check className="mr-1 h-3.5 w-3.5" /> Completato
             </span>
           )}
           {cancelled && (
-            <span className="inline-flex items-center rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            <span className="status-badge-in inline-flex items-center rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
               <Ban className="mr-1 h-3.5 w-3.5" /> Cancellata
             </span>
           )}
           {noShow && (
-            <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-800 dark:bg-red-900/70 dark:text-red-100">
+            <span className="status-badge-in inline-flex items-center rounded-full bg-destructive-soft px-2.5 py-1 text-xs font-medium text-destructive-soft-foreground">
               <UserX className="mr-1 h-3.5 w-3.5" /> No-show
             </span>
           )}
@@ -356,7 +356,7 @@ export default function CalendarView({
                     selected={date} onSelect={(d) => { if (d) { onDateChange(d); setDatePickerOpen(false); } }}
                     disabled={mode === "booking" ? (d) => d < todayMidnight : undefined}
                     modifiers={{ closed: (d) => isClosedDay(toDateString(d), meta.openingHours, meta.closures) }}
-                    modifiersClassNames={{ closed: "bg-red-100 text-red-700 line-through dark:bg-red-900/40 dark:text-red-300" }}
+                    modifiersClassNames={{ closed: "bg-destructive-soft text-destructive-soft-foreground line-through" }}
                     classNames={{ day_today: "" }} initialFocus />
                 </div>
               </DrawerContent>
@@ -375,7 +375,7 @@ export default function CalendarView({
                   selected={date} onSelect={(d) => { if (d) { onDateChange(d); setDatePickerOpen(false); } }}
                   disabled={mode === "booking" ? (d) => d < todayMidnight : undefined}
                   modifiers={{ closed: (d) => isClosedDay(toDateString(d), meta.openingHours, meta.closures) }}
-                  modifiersClassNames={{ closed: "bg-red-100 text-red-700 line-through dark:bg-red-900/40 dark:text-red-300" }}
+                  modifiersClassNames={{ closed: "bg-destructive-soft text-destructive-soft-foreground line-through" }}
                   classNames={{ day_today: "" }} initialFocus />
               </PopoverContent>
             </Popover>
@@ -444,7 +444,8 @@ export default function CalendarView({
             <p className="text-sm text-muted-foreground">{data.reason || "Nessun appuntamento disponibile in questa data."}</p>
           </div>
         ) : (
-          <>
+          <div className={mode === "admin" ? "lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-6" : undefined}>
+           <div className="min-w-0">
             <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
               {data.slots.filter((s) => inFilter(s.time, timeFilter, customFrom, customTo)).map((slot) => {
                 const style = STATUS_STYLE[slot.status] || STATUS_STYLE.free;
@@ -452,8 +453,8 @@ export default function CalendarView({
                 const isSelectable = mode === "booking" && slot.available && !slotPast;
                 const isSelected = selectedSlot === slot.time;
                 const hasBookings = visibleBookings.some((b) => b.startTime === slot.time);
-                const bookingChip = slot.available ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700";
-                const bookingDot = slot.available ? "bg-emerald-500" : "bg-red-500";
+                const bookingChip = slot.available ? "bg-success-soft text-success-soft-foreground" : "bg-destructive-soft text-destructive-soft-foreground";
+                const bookingDot = slot.available ? "bg-success" : "bg-destructive";
                 return (
                   <button
                     key={slot.time} type="button"
@@ -490,13 +491,14 @@ export default function CalendarView({
             </div>
 
             <div className="mt-5 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-              <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" /> Libero</span>
-              <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-500" /> In parte</span>
-              <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-red-500" /> Occupato</span>
+              <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-success" /> Libero</span>
+              <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-warning" /> In parte</span>
+              <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-destructive" /> Occupato</span>
             </div>
+           </div>
 
             {mode === "admin" && (
-              <div className="mt-6 border-t border-border pt-5">
+              <div className="mt-6 border-t border-border pt-5 lg:mt-5 lg:max-h-[70vh] lg:overflow-y-auto lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h4 className="font-heading text-sm font-semibold">Prenotazioni del giorno ({visibleBookings.length}){queryStaff !== "any" ? ` · ${(data?.operators || []).find((o) => o.id === queryStaff)?.name || "operatore"}` : ""}</h4>
                   {selected.size > 0 && (
@@ -539,7 +541,7 @@ export default function CalendarView({
                 )}
               </div>
             )}
-          </>
+          </div>
         )}
 
         <Dialog open={!!slotModal} onOpenChange={(o) => !o && setSlotModal(null)}>

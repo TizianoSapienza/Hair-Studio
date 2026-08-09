@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { bookingsApi } from "@/api/bookingsApi";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Loader2, GitCompare } from "lucide-react";
+import { ArrowLeft, Loader2, GitCompare, ChevronLeft, ChevronRight } from "lucide-react";
 import AdminHeader from "@/components/layout/AdminHeader";
 import StatsCompare from "@/components/admin/StatsCompare";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -140,7 +140,13 @@ export default function AdminStats() {
 
   const aVals = unit === "week" ? { week: aWeek, year: aYear } : unit === "month" ? { month: aMonth, year: aYear } : { year: aYear };
   const bVals = unit === "week" ? { week: bWeek, year: bYear } : unit === "month" ? { month: bMonth, year: bYear } : { year: bYear };
-  const weekOptions = Array.from({ length: 52 }, (_, i) => i + 1);
+  // ponytail: 52-week approximation, ignores ISO 53-week years — fine for browsing, revisit if that ever bites
+  const stepWeek = (delta, vals, setWeek, setYear) => {
+    const next = vals.week + delta;
+    if (next < 1) { setYear(vals.year - 1); setWeek(52); }
+    else if (next > 52) { setYear(vals.year + 1); setWeek(1); }
+    else setWeek(next);
+  };
 
   const renderPeriod = (tag, vals, setWeek, setMonth, setYear) => {
     const isA = tag === "A";
@@ -155,12 +161,15 @@ export default function AdminStats() {
         <div className="mt-2 flex flex-wrap items-end gap-2">
           {unit === "week" && (
             <Field label="Settimana">
-              <Select value={String(vals.week)} onValueChange={(v) => setWeek(Number(v))}>
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {weekOptions.map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-1">
+                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" aria-label="Settimana precedente" onClick={() => stepWeek(-1, vals, setWeek, setYear)}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="flex-1 rounded-md border border-input bg-background px-2 py-1.5 text-center text-sm font-medium">Sett. {vals.week}</span>
+                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" aria-label="Settimana successiva" onClick={() => stepWeek(1, vals, setWeek, setYear)}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </Field>
           )}
           {unit === "month" && (

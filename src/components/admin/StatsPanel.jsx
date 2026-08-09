@@ -4,9 +4,9 @@ import { DAY_LABELS_LONG } from "@/lib/salonConfig";
 
 const TINTS = {
   primary: "bg-primary/10 text-primary",
-  emerald: "bg-emerald-50 text-emerald-600",
+  emerald: "bg-success-soft text-success",
   brand: "bg-brand/10 text-brand",
-  amber: "bg-amber-50 text-amber-600",
+  amber: "bg-warning-soft text-warning",
 };
 
 function Card({ icon, tint, label, children }) {

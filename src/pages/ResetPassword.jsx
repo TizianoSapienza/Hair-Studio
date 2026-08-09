@@ -63,7 +63,7 @@ export default function ResetPassword() {
   }
 
   const Req = ({ ok, label }) => (
-    <li className={`flex items-center gap-1.5 ${ok ? "text-emerald-600" : "text-muted-foreground"}`}>
+    <li className={`flex items-center gap-1.5 ${ok ? "text-success" : "text-muted-foreground"}`}>
       {ok ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />} {label}
     </li>
   );

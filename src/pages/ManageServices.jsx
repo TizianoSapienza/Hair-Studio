@@ -195,7 +195,7 @@ export default function ManageServices() {
                               <td className="px-4 py-3">
                                 <div className="flex items-center gap-2">
                                   <Switch checked={s.active !== false} onCheckedChange={() => toggleActive(s)} aria-label="Stato servizio" />
-                                  <span className={`text-xs font-semibold ${s.active !== false ? "text-emerald-600" : "text-red-600"}`}>
+                                  <span className={`text-xs font-semibold ${s.active !== false ? "text-success" : "text-destructive"}`}>
                                     {s.active !== false ? "ON" : "OFF"}
                                   </span>
                                 </div>

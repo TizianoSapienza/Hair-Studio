@@ -90,7 +90,7 @@ export default function NotificationBell() {
     <Button variant="ghost" size="icon" className="relative h-9 w-9" aria-label="Notifiche">
       <Bell className="h-5 w-5" />
       {unread > 0 && (
-        <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground">
+        <span className="badge-pop-in absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground">
           {unread > 9 ? "9+" : unread}
         </span>
       )}

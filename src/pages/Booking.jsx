@@ -235,10 +235,10 @@ export default function Booking() {
           ) : (
             <>
               <DialogHeader>
-                <DialogTitle className="flex items-center gap-2"><CalendarCheck className="h-5 w-5 text-emerald-600" /> Prenotazione confermata!</DialogTitle>
+                <DialogTitle className="flex items-center gap-2"><CalendarCheck className="h-5 w-5 text-success animate-icon-pop motion-reduce:animate-icon-fade-in" /> Prenotazione confermata!</DialogTitle>
                 <DialogDescription>Il tuo appuntamento è stato registrato. Ti abbiamo inviato una email di conferma.</DialogDescription>
               </DialogHeader>
-              <div className="space-y-2 rounded-xl bg-emerald-50 p-4 text-sm text-emerald-800">
+              <div className="space-y-2 rounded-xl bg-success-soft p-4 text-sm text-success-soft-foreground">
                 <p className="flex items-center gap-2"><Scissors className="h-4 w-4" /> Operatore: <strong>{assignedStaff}</strong></p>
                 <p>Puoi rivedere e gestire i tuoi appuntamenti nella tua area personale.</p>
               </div>

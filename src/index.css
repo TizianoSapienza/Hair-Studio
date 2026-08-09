@@ -21,6 +21,20 @@
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
+    --destructive-soft: 0 86% 97%;
+    --destructive-soft-foreground: 0 74% 42%;
+    --success: 158 64% 32%;
+    --success-foreground: 0 0% 100%;
+    --success-soft: 152 81% 96%;
+    --success-soft-foreground: 158 64% 25%;
+    --warning: 32 95% 44%;
+    --warning-foreground: 0 0% 100%;
+    --warning-soft: 48 100% 96%;
+    --warning-soft-foreground: 26 90% 37%;
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 100%;
+    --info-soft: 214 100% 97%;
+    --info-soft-foreground: 224 76% 48%;
     --border: 35 20% 88%;
     --input: 35 20% 88%;
     --ring: 36 74% 48%;
@@ -64,6 +78,20 @@
     --accent-foreground: 0 0% 98%;
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 0 50% 22%;
+    --destructive-soft-foreground: 0 80% 85%;
+    --success: 158 64% 52%;
+    --success-foreground: 0 0% 8%;
+    --success-soft: 158 40% 20%;
+    --success-soft-foreground: 152 60% 80%;
+    --warning: 38 92% 60%;
+    --warning-foreground: 0 0% 8%;
+    --warning-soft: 32 60% 22%;
+    --warning-soft-foreground: 45 90% 80%;
+    --info: 217 91% 68%;
+    --info-foreground: 0 0% 8%;
+    --info-soft: 224 50% 24%;
+    --info-soft-foreground: 214 90% 82%;
     --border: 0 0% 28%;
     --input: 0 0% 28%;
     --ring: 36 88% 60%;
@@ -123,12 +151,54 @@
     user-select: none;
   }
 
+  .status-badge-in {
+    opacity: 1;
+    transition: opacity 150ms ease-out;
+  }
+
+  @starting-style {
+    .status-badge-in {
+      opacity: 0;
+    }
+  }
+
+  .badge-pop-in {
+    opacity: 1;
+    transform: scale(1);
+    transition: opacity 160ms ease-out, transform 160ms ease-out;
+  }
+
+  @starting-style {
+    .badge-pop-in {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .badge-pop-in {
+      transition: opacity 160ms ease-out;
+    }
+    @starting-style {
+      .badge-pop-in {
+        transform: none;
+      }
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
-      animation-duration: 0.001ms !important;
+      animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
-      transition-duration: 0.001ms !important;
+      transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
+    }
+
+    /* Loading spinners keep spinning: this is the only in-progress signal on
+       most forms and buttons in the app, with no text alternative alongside it. */
+    .animate-spin {
+      animation-duration: 1s !important;
+      animation-iteration-count: infinite !important;
     }
   }
 }

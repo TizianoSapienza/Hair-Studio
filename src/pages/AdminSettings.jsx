@@ -6,9 +6,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import AdminHeader from "@/components/layout/AdminHeader";
 import { toast } from "sonner";
+
+const URL_FIELDS = [
+  ["instagramUrl", "Instagram"],
+  ["facebookUrl", "Facebook"],
+  ["whatsappUrl", "WhatsApp"],
+  ["googleMapsUrl", "Google Maps"],
+  ["googleReviewUrl", "Link recensione Google"],
+];
+
+function isValidUrl(value) {
+  try {
+    const u = new URL(value);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
 
 const DEFAULT_ORARI = [
   { giorno: "Lunedì", orario: "", chiuso: true },
@@ -36,15 +54,17 @@ const EMPTY = {
 export default function AdminSettings() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState(EMPTY);
+  const [savedForm, setSavedForm] = useState(EMPTY);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   useEffect(() => {
     businessInfoApi.adminGet()
       .then((res) => {
         const rec = res?.businessInfo;
         if (rec) {
-          setForm({
+          const loaded = {
             businessName: rec.businessName || "",
             address: rec.address || "",
             phone: rec.phone || "",
@@ -55,12 +75,22 @@ export default function AdminSettings() {
             googleMapsUrl: rec.googleMapsUrl || "",
             googleReviewUrl: rec.googleReviewUrl || "",
             openingHoursDisplay: rec.openingHoursDisplay?.length ? rec.openingHoursDisplay : DEFAULT_ORARI,
-          });
+          };
+          setForm(loaded);
+          setSavedForm(loaded);
         }
       })
       .catch(() => setForm(EMPTY))
       .finally(() => setLoading(false));
   }, []);
+
+  const dirty = JSON.stringify(form) !== JSON.stringify(savedForm);
+
+  useEffect(() => {
+    const handler = (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [dirty]);
 
   const updateOrari = (i, field, value) =>
     setForm((f) => ({
@@ -68,23 +98,44 @@ export default function AdminSettings() {
       openingHoursDisplay: f.openingHoursDisplay.map((row, idx) => (idx === i ? { ...row, [field]: value } : row)),
     }));
 
-  const handleSave = async (e) => {
-    e.preventDefault();
+  const validate = () => {
     if (!form.businessName || !form.address || !form.phone) {
       toast.error("Compila nome attività, indirizzo e telefono");
-      return;
+      return false;
     }
+    for (const [field, label] of URL_FIELDS) {
+      const value = form[field]?.trim();
+      if (value && !isValidUrl(value)) {
+        toast.error(`Link "${label}" non valido`, { description: "Deve essere un URL completo, es. https://..." });
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!validate()) return;
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmSave = async () => {
+    setConfirmOpen(false);
     setSaving(true);
     try {
       await businessInfoApi.adminUpdate(form);
       queryClient.invalidateQueries({ queryKey: ["business_info"] });
+      setSavedForm(form);
       toast.success("Impostazioni salvate");
     } catch (err) {
-      toast.error("Errore", { description: err.message });
+      console.error(err);
+      toast.error("Impossibile salvare", { description: "Controlla la connessione e riprova." });
     } finally {
       setSaving(false);
     }
   };
+
+  const handleDiscard = () => setForm(savedForm);
 
   return (
     <div className="flex min-h-screen flex-col bg-secondary/30">
@@ -99,7 +150,7 @@ export default function AdminSettings() {
         {loading ? (
           <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
         ) : (
-          <form onSubmit={handleSave} className="space-y-6 rounded-2xl border border-border bg-card p-5 sm:p-6">
+          <form onSubmit={handleSubmit} className="space-y-6 rounded-2xl border border-border bg-card p-5 sm:p-6">
             <div className="space-y-2">
               <Label htmlFor="nome">Nome attività</Label>
               <Input id="nome" value={form.businessName} onChange={(e) => setForm({ ...form, businessName: e.target.value })} required />
@@ -162,14 +213,33 @@ export default function AdminSettings() {
               </div>
             </div>
 
-            <div className="flex justify-end">
-              <Button type="submit" disabled={saving}>
+            <div className="flex items-center justify-end gap-3">
+              {dirty && <p className="mr-auto text-sm text-warning">Modifiche non salvate</p>}
+              {dirty && (
+                <Button type="button" variant="outline" onClick={handleDiscard} disabled={saving}>Annulla modifiche</Button>
+              )}
+              <Button type="submit" disabled={saving || !dirty}>
                 {saving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvataggio...</> : <><Save className="mr-2 h-4 w-4" /> Salva</>}
               </Button>
             </div>
           </form>
         )}
       </main>
+
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confermi le modifiche?</DialogTitle>
+            <DialogDescription>Questi dati sono visibili subito sul sito pubblico (indirizzo, telefono, orari e link social).</DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>Annulla</Button>
+            <Button onClick={handleConfirmSave}>
+              <Save className="mr-2 h-4 w-4" /> Conferma e salva
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

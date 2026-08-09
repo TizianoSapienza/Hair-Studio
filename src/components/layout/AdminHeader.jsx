@@ -41,9 +41,6 @@ export default function AdminHeader() {
           <Button variant="ghost" size="sm" asChild>
             <Link to="/admin" aria-label="Dashboard"><LayoutDashboard className="h-4 w-4" /><span className="hidden lg:inline ml-2">Dashboard</span></Link>
           </Button>
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/admin/impostazioni" aria-label="Impostazioni"><Settings className="h-4 w-4" /><span className="hidden lg:inline ml-2">Impostazioni</span></Link>
-          </Button>
           <Button variant="ghost" size="icon" asChild>
             <Link to="/profilo" aria-label="Profilo"><UserCircle className="h-5 w-5" /></Link>
           </Button>
@@ -53,7 +50,7 @@ export default function AdminHeader() {
         </div>
 
         {/* Mobile: solo logout (navigazione gestita dalla bottom nav) */}
-        <div className="md:hidden flex items-center gap-1">
+        <div className="md:hidden flex items-center gap-1 [&>button]:h-11 [&>button]:min-w-11">
           <ThemeToggle />
           <NotificationBell />
           <Button variant="ghost" size="sm" onClick={handleLogout} aria-label="Logout">

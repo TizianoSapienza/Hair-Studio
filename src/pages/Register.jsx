@@ -14,7 +14,7 @@ const CountryCodeSelect = React.lazy(() => import("@/components/profile/CountryC
 
 function Requirement({ ok, label }) {
   return (
-    <li className={`flex items-center gap-1.5 text-xs ${ok ? "text-emerald-600" : "text-muted-foreground"}`}>
+    <li className={`flex items-center gap-1.5 text-xs ${ok ? "text-success" : "text-muted-foreground"}`}>
       {ok ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
       {label}
     </li>

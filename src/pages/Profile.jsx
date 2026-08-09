@@ -217,7 +217,7 @@ export default function Profile() {
                 ["number", "Un numero"],
                 ["special", "Carattere speciale"],
               ].map(([k, l]) => (
-                <li key={k} className={`flex items-center gap-1.5 ${pwdReqs[k] ? "text-emerald-600" : "text-muted-foreground"}`}>
+                <li key={k} className={`flex items-center gap-1.5 ${pwdReqs[k] ? "text-success" : "text-muted-foreground"}`}>
                   {pwdReqs[k] ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />} {l}
                 </li>
               ))}
