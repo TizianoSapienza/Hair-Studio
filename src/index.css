@@ -11,6 +11,7 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 3.9%;
     --primary: 36 74% 48%;
+    --primary-ink: 36 74% 32%;
     --primary-foreground: 0 0% 100%;
     --secondary: 220 8% 91%;
     --secondary-foreground: 30 15% 15%;
@@ -20,6 +21,20 @@
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
+    --destructive-soft: 0 86% 97%;
+    --destructive-soft-foreground: 0 74% 42%;
+    --success: 158 64% 32%;
+    --success-foreground: 0 0% 100%;
+    --success-soft: 152 81% 96%;
+    --success-soft-foreground: 158 64% 25%;
+    --warning: 32 95% 44%;
+    --warning-foreground: 0 0% 100%;
+    --warning-soft: 48 100% 96%;
+    --warning-soft-foreground: 26 90% 37%;
+    --info: 217 91% 60%;
+    --info-foreground: 0 0% 100%;
+    --info-soft: 214 100% 97%;
+    --info-soft-foreground: 224 76% 48%;
     --border: 35 20% 88%;
     --input: 35 20% 88%;
     --ring: 36 74% 48%;
@@ -31,9 +46,9 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
-    --font-heading: ui-sans-serif, system-ui, sans-serif;
-    --font-body: ui-sans-serif, system-ui, sans-serif;
-    --font-display: ui-sans-serif, system-ui, sans-serif;
+    --font-heading: "Bodoni Moda", ui-serif, Georgia, serif;
+    --font-body: "Manrope", ui-sans-serif, system-ui, sans-serif;
+    --font-display: "Bodoni Moda", ui-serif, Georgia, serif;
     --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -53,6 +68,7 @@
     --popover: 0 0% 13%;
     --popover-foreground: 0 0% 98%;
     --primary: 36 88% 60%;
+    --primary-ink: 36 88% 60%;
     --primary-foreground: 0 0% 100%;
     --secondary: 0 0% 18%;
     --secondary-foreground: 0 0% 98%;
@@ -62,6 +78,20 @@
     --accent-foreground: 0 0% 98%;
     --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
+    --destructive-soft: 0 50% 22%;
+    --destructive-soft-foreground: 0 80% 85%;
+    --success: 158 64% 52%;
+    --success-foreground: 0 0% 8%;
+    --success-soft: 158 40% 20%;
+    --success-soft-foreground: 152 60% 80%;
+    --warning: 38 92% 60%;
+    --warning-foreground: 0 0% 8%;
+    --warning-soft: 32 60% 22%;
+    --warning-soft-foreground: 45 90% 80%;
+    --info: 217 91% 68%;
+    --info-foreground: 0 0% 8%;
+    --info-soft: 224 50% 24%;
+    --info-soft-foreground: 214 90% 82%;
     --border: 0 0% 28%;
     --input: 0 0% 28%;
     --ring: 36 88% 60%;
@@ -92,6 +122,26 @@
     overscroll-behavior: none;
   }
 
+  /* Scrollbar segue il tema invece del bianco di default del browser (dark mode) */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: hsl(var(--muted-foreground) / 0.5);
+  }
+
   body {
     @apply bg-background text-foreground font-body;
     overscroll-behavior: none;
@@ -120,6 +170,85 @@
     -webkit-user-select: none;
     user-select: none;
   }
+
+  .status-badge-in {
+    opacity: 1;
+    transition: opacity 150ms ease-out;
+  }
+
+  @starting-style {
+    .status-badge-in {
+      opacity: 0;
+    }
+  }
+
+  .badge-pop-in {
+    opacity: 1;
+    transform: scale(1);
+    transition: opacity 160ms ease-out, transform 160ms ease-out;
+  }
+
+  @starting-style {
+    .badge-pop-in {
+      opacity: 0;
+      transform: scale(0.5);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .badge-pop-in {
+      transition: opacity 160ms ease-out;
+    }
+    @starting-style {
+      .badge-pop-in {
+        transform: none;
+      }
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+
+    /* Loading spinners keep spinning: this is the only in-progress signal on
+       most forms and buttons in the app, with no text alternative alongside it. */
+    .animate-spin {
+      animation-duration: 1s !important;
+      animation-iteration-count: infinite !important;
+    }
+  }
+}
+
+/* Theme toggle: diagonal wipe from top-right corner, driven by the View
+   Transitions API (see ThemeContext.jsx). Browsers without support just
+   keep the instant class toggle, no fallback needed here. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-new(root) {
+  clip-path: circle(0% at 100% 0%);
+  animation: theme-wipe-reveal 800ms ease-in-out forwards;
+}
+
+::view-transition-old(root) {
+  clip-path: circle(150% at 100% 0%);
+  z-index: -1;
+}
+
+@keyframes theme-wipe-reveal {
+  from { clip-path: circle(0% at 100% 0%); }
+  to { clip-path: circle(150% at 100% 0%); }
+}
+
+::view-transition-group(root) {
+  animation-duration: 800ms;
 }
 
 /* Disable text selection on interactive controls */

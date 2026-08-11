@@ -1,6 +1,8 @@
 #env
 .env
 .env.*
+!.env.example
+!**/.env.example
 
 # Logs
 /logs
@@ -27,6 +29,9 @@ dist-ssr
 *.sln
 *.sw?
 
-.env
 .vite
-base44/.app.jsonc
+/docs
+.claude
+.impeccable
+graphify-out
+CLAUDE.md

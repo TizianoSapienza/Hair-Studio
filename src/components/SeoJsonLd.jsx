@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { scheduleApi } from "@/api/scheduleApi";
 import useBusinessInfo from "@/hooks/useBusinessInfo";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -13,20 +13,18 @@ export default function SeoJsonLd({ title, description }) {
 
     (async () => {
       try {
-        const oh = await base44.entities.OpeningHours.list().catch(() => []);
-        const ohRec = (oh || [])[0] || null;
-        const days = (ohRec && ohRec.days) || [];
-        const specs = days
-          .filter((d) => d.open && d.start_time && d.end_time)
+        const { openingHours } = await scheduleApi.openingHours().catch(() => ({ openingHours: [] }));
+        const specs = (openingHours || [])
+          .filter((d) => d.isOpen && d.startTime && d.endTime)
           .map((d) => ({
             "@type": "OpeningHoursSpecification",
-            "dayOfWeek": DAY_NAMES[d.day_of_week],
-            "opens": d.start_time,
-            "closes": d.end_time,
+            "dayOfWeek": DAY_NAMES[d.dayOfWeek],
+            "opens": d.startTime,
+            "closes": d.endTime,
           }));
-        const name = info?.nome_attivita || "Hair Studio";
-        const address = info?.indirizzo || "";
-        const phone = info?.telefono || "";
+        const name = info?.businessName || "Hair Studio";
+        const address = info?.address || "";
+        const phone = info?.phone || "";
         const jsonLd = {
           "@context": "https://schema.org",
           "@type": "HairSalon",
@@ -46,7 +44,9 @@ export default function SeoJsonLd({ title, description }) {
         scriptEl.type = "application/ld+json";
         scriptEl.text = JSON.stringify(jsonLd);
         document.head.appendChild(scriptEl);
-      } catch (e) { /* ignore */ }
+      } catch (e) {
+        console.warn("Impossibile generare il JSON-LD", e);
+      }
     })();
 
     if (title) document.title = title;

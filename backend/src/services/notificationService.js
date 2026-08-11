@@ -1,0 +1,56 @@
+import { pool } from "../db/pool.js";
+import { publishUserNotification } from "./realtimeService.js";
+
+//Non pubblica sul bus realtime: l'evento va emesso dal chiamante DOPO il commit della
+//transazione (vedi publishNotifications), altrimenti un client riceve via SSE una notifica
+//che poi risulta non esistere nel DB se la transazione fallisce più avanti.
+export async function createNotification(client, { userId, type, message, bookingId }) {
+  const { rows } = await client.query(
+    `INSERT INTO notifications (user_id, type, message, booking_id)
+     VALUES ($1, $2, $3, $4)
+     RETURNING *`,
+    [userId, type, message, bookingId ?? null]
+  );
+  return rows[0];
+}
+
+export async function notifyAllAdmins(client, { type, message, bookingId }) {
+  const { rows } = await client.query(
+    `INSERT INTO notifications (user_id, type, message, booking_id)
+     SELECT id, $1, $2, $3 FROM users WHERE role = 'admin'
+     RETURNING *`,
+    [type, message, bookingId ?? null]
+  );
+  return rows;
+}
+
+export function publishNotifications(notifications) {
+  for (const notification of notifications) {
+    publishUserNotification(notification.user_id, { type: "notification", notification });
+  }
+}
+
+export async function listNotifications(userId, { unreadOnly } = {}) {
+  const { rows } = await pool.query(
+    `SELECT * FROM notifications
+     WHERE user_id = $1 ${unreadOnly ? "AND is_read = false" : ""}
+     ORDER BY created_at DESC
+     LIMIT 50`,
+    [userId]
+  );
+  return rows;
+}
+
+export async function markNotificationRead(userId, id) {
+  const { rows } = await pool.query(
+    `UPDATE notifications SET is_read = true WHERE id = $1 AND user_id = $2 RETURNING *`,
+    [id, userId]
+  );
+  return rows[0] || null;
+}
+
+export async function markAllNotificationsRead(userId) {
+  await pool.query(`UPDATE notifications SET is_read = true WHERE user_id = $1 AND is_read = false`, [
+    userId,
+  ]);
+}

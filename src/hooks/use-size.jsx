@@ -3,11 +3,15 @@ import * as React from "react"
 export function useSize(ref) {
   const [size, setSize] = React.useState(null)
 
-  // useLayoutEffect (not useEffect): the initial measurement must land before
-  // the browser paints, so consumers can render their real content on the
-  // very first painted frame instead of a guess. A ResizeObserver's first
-  // callback arrives too late for that — by then an <img> src guess has
-  // already been dispatched to the network.
+  //useLayoutEffect (non useEffect): la prima volta che 
+  //il componente viene montato, vogliamo calcolare le 
+  //dimensioni dell'elemento prima che il browser dipinga 
+  //la UI. In questo modo, i consumatori possono renderizzare 
+  //il loro contenuto reale nel primo frame dipinto invece 
+  //di un'ipotesi. Il primo callback di ResizeObserver arriva 
+  //troppo tardi per questo: a quel punto, un'ipotesi 
+  //di src di <img> è già stata inviata alla rete.
+
   React.useLayoutEffect(() => {
     const element = ref.current
     if (!element) return

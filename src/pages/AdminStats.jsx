@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { Link, Navigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { Link } from "react-router-dom";
+import { bookingsApi } from "@/api/bookingsApi";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Loader2, GitCompare } from "lucide-react";
+import { ArrowLeft, Loader2, GitCompare, ChevronLeft, ChevronRight } from "lucide-react";
 import AdminHeader from "@/components/layout/AdminHeader";
 import StatsCompare from "@/components/admin/StatsCompare";
-import { useAuth } from "@/lib/AuthContext";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useAdminEvents } from "@/hooks/useAdminEvents";
+import { toDateString } from "@/lib/dateUtils";
 
 const MONTH_LABELS = ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"];
 const UNITS = [
@@ -17,7 +18,6 @@ const UNITS = [
 ];
 
 function pad(n) { return String(n).padStart(2, "0"); }
-function fmt(d) { return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; }
 
 function isoWeekNumber(d) {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -42,7 +42,7 @@ function rangeFor(unit, value, year) {
     const mon = isoWeekMonday(year, value);
     const tue = new Date(mon); tue.setDate(mon.getDate() + 1);
     const sat = new Date(mon); sat.setDate(mon.getDate() + 5);
-    return { from: fmt(tue), to: fmt(sat) };
+    return { from: toDateString(tue), to: toDateString(sat) };
   }
   if (unit === "month") {
     const last = new Date(year, value, 0).getDate();
@@ -66,19 +66,17 @@ function labelFor(unit, vals) {
   return `Anno ${vals.year}`;
 }
 
-function computeStats(bookings, svcPrice) {
-  const real = (bookings || []).filter((b) => b.status !== "blocked" && b.status !== "cancelled");
-  const svcCount = {};
-  real.forEach((b) => { if (b.service_id && b.service_name) svcCount[b.service_name] = (svcCount[b.service_name] || 0) + 1; });
-  const topService = Object.entries(svcCount).sort((a, b) => b[1] - a[1])[0] || null;
-  const revenue = real.filter((b) => b.status === "completed").reduce((acc, b) => acc + (svcPrice[b.service_id] || 0), 0);
-  const wdCount = {};
-  real.forEach((b) => { const wd = new Date(b.date + "T00:00:00").getDay(); wdCount[wd] = (wdCount[wd] || 0) + 1; });
-  const topWd = Object.entries(wdCount).sort((a, b) => b[1] - a[1])[0] || null;
-  const tmCount = {};
-  real.forEach((b) => { if (b.start_time) tmCount[b.start_time] = (tmCount[b.start_time] || 0) + 1; });
-  const topTm = Object.entries(tmCount).sort((a, b) => b[1] - a[1])[0] || null;
-  return { topService, revenue, topWd, topTm, total: real.length };
+//Trasforma l'aggregazione già calcolata dal backend (/admin/stats) nella forma attesa da
+//StatsCompare. topService/topWd/topTm riflettono solo le prenotazioni completate, come il
+//fatturato
+function toStatsShape(stats) {
+  const total = (stats.byStatus || [])
+    .filter((s) => s.status !== "cancellata")
+    .reduce((acc, s) => acc + s.count, 0);
+  const topService = stats.byService?.[0] ? [stats.byService[0].serviceName, stats.byService[0].count] : null;
+  const topWd = stats.byWeekday?.[0] ? [String(stats.byWeekday[0].weekday), stats.byWeekday[0].count] : null;
+  const topTm = stats.byTime?.[0] ? [String(stats.byTime[0].startTime).slice(0, 5), stats.byTime[0].count] : null;
+  return { total, topService, revenue: stats.revenue, topWd, topTm };
 }
 
 function Field({ label, children }) {
@@ -91,7 +89,6 @@ function Field({ label, children }) {
 }
 
 export default function AdminStats() {
-  const { user } = useAuth();
   const now = new Date();
   const curYear = now.getFullYear();
   const curMonth = now.getMonth() + 1;
@@ -123,15 +120,13 @@ export default function AdminStats() {
         const ra = rangeFor(s.unit, aVal, s.aYear);
         const bVal = s.unit === "week" ? s.bWeek : s.unit === "month" ? s.bMonth : null;
         const rb = rangeFor(s.unit, bVal, s.bYear);
-        const [bookingsA, bookingsB, services] = await Promise.all([
-          base44.entities.Booking.filter({ date: { $gte: ra.from, $lte: ra.to } }, undefined, 1000),
-          base44.entities.Booking.filter({ date: { $gte: rb.from, $lte: rb.to } }, undefined, 1000),
-          base44.entities.Service.list(),
+        const [resA, resB] = await Promise.all([
+          bookingsApi.adminStats({ from: ra.from, to: ra.to }),
+          bookingsApi.adminStats({ from: rb.from, to: rb.to }),
         ]);
-        const svcPrice = {};
-        (services || []).forEach((p) => { svcPrice[p.id] = Number(p.price) || 0; });
-        if (!cancelled) { setDataA(computeStats(bookingsA, svcPrice)); setDataB(computeStats(bookingsB, svcPrice)); }
+        if (!cancelled) { setDataA(toStatsShape(resA)); setDataB(toStatsShape(resB)); }
       } catch (e) {
+        console.warn("Impossibile caricare le statistiche", e);
         if (!cancelled) { setDataA(null); setDataB(null); }
       } finally {
         if (!cancelled) setLoading(false);
@@ -140,17 +135,18 @@ export default function AdminStats() {
     return () => { cancelled = true; };
   }, [selKey]);
 
-  // Aggiornamento real-time delle statistiche
-  useEffect(() => {
-    const unsub = base44.entities.Booking.subscribe(() => { setRtKey((k) => k + 1); });
-    return unsub;
-  }, []);
-
-  if (user && user.role !== "admin") return <Navigate to="/" replace />;
+  //Aggiornamento real-time delle statistiche
+  useAdminEvents(() => setRtKey((k) => k + 1));
 
   const aVals = unit === "week" ? { week: aWeek, year: aYear } : unit === "month" ? { month: aMonth, year: aYear } : { year: aYear };
   const bVals = unit === "week" ? { week: bWeek, year: bYear } : unit === "month" ? { month: bMonth, year: bYear } : { year: bYear };
-  const weekOptions = Array.from({ length: 52 }, (_, i) => i + 1);
+  // ponytail: 52-week approximation, ignores ISO 53-week years — fine for browsing, revisit if that ever bites
+  const stepWeek = (delta, vals, setWeek, setYear) => {
+    const next = vals.week + delta;
+    if (next < 1) { setYear(vals.year - 1); setWeek(52); }
+    else if (next > 52) { setYear(vals.year + 1); setWeek(1); }
+    else setWeek(next);
+  };
 
   const renderPeriod = (tag, vals, setWeek, setMonth, setYear) => {
     const isA = tag === "A";
@@ -165,12 +161,15 @@ export default function AdminStats() {
         <div className="mt-2 flex flex-wrap items-end gap-2">
           {unit === "week" && (
             <Field label="Settimana">
-              <Select value={String(vals.week)} onValueChange={(v) => setWeek(Number(v))}>
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {weekOptions.map((n) => <SelectItem key={n} value={String(n)}>{n}</SelectItem>)}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-1">
+                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" aria-label="Settimana precedente" onClick={() => stepWeek(-1, vals, setWeek, setYear)}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <span className="flex-1 rounded-md border border-input bg-background px-2 py-1.5 text-center text-sm font-medium">Sett. {vals.week}</span>
+                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" aria-label="Settimana successiva" onClick={() => stepWeek(1, vals, setWeek, setYear)}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </Field>
           )}
           {unit === "month" && (

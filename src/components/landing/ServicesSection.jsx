@@ -1,32 +1,19 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Clock, Euro } from "lucide-react";
-import { motion } from "framer-motion";
-import { base44 } from "@/api/base44Client";
+import { motion, useReducedMotion } from "framer-motion";
+import useServices from "@/hooks/useServices";
+import { formatDuration } from "@/lib/format";
 import Reveal from "./Reveal";
 
-function formatDuration(min) {
-  if (min < 60) return `${min} min`;
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  return m ? `${h}h ${m}min` : `${h}h`;
-}
-
 export default function ServicesSection() {
-  const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    base44.functions.invoke("GetPublicSiteData")
-      .then((res) => setServices(res.data?.services || []))
-      .catch(() => setServices([]))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: services = [], isLoading: loading } = useServices();
+  const shouldReduceMotion = useReducedMotion();
 
   return (
     <section id="servizi" className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
       <Reveal>
         <div className="text-center">
-          <p className="text-sm font-semibold uppercase tracking-wider text-primary">I nostri servizi</p>
+          <p className="text-sm font-semibold uppercase tracking-wider text-primary-ink">I nostri servizi</p>
           <h2 className="mt-2 font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
             Cura per ogni dettaglio
           </h2>
@@ -47,10 +34,10 @@ export default function ServicesSection() {
           {services.map((s, i) => (
             <motion.div
               key={s.id}
-              initial={{ opacity: 0, y: 24 }}
+              initial={shouldReduceMotion ? false : { opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
-              transition={{ duration: 0.5, delay: (i % 3) * 0.08 }}
+              transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.5, delay: (i % 3) * 0.08 }}
               className="group rounded-2xl border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:border-primary/50 hover:shadow-lg"
             >
               <div className="flex items-start justify-between">
@@ -61,8 +48,8 @@ export default function ServicesSection() {
               </div>
               {s.description && <p className="mt-2 text-sm text-muted-foreground">{s.description}</p>}
               <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4 text-brand" />
-                {formatDuration(s.duration_minutes)}
+                <Clock className="h-4 w-4 text-foreground/60" />
+                {formatDuration(s.durationMinutes)}
               </div>
             </motion.div>
           ))}

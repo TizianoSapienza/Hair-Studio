@@ -1,36 +1,51 @@
+import { Suspense, lazy } from 'react';
 import { Toaster } from "@/components/ui/sonner"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Navigate } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider } from '@/lib/AuthContext';
-import UserNotRegisteredError from './components/UserNotRegisteredError';
 import ScrollToTop from './components/ScrollToTop';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import BottomNav from '@/components/layout/BottomNav';
 import PullToRefresh from '@/components/PullToRefresh';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import AnimatedRoutes from '@/components/AnimatedRoutes';
+import { Skeleton } from '@/components/ui/skeleton';
 import Landing from '@/pages/Landing';
-import About from '@/pages/About';
-import Contact from '@/pages/Contact';
-import Booking from '@/pages/Booking';
-import MyBookings from '@/pages/MyBookings';
-import AdminDashboard from '@/pages/AdminDashboard';
-import ManageServices from '@/pages/ManageServices';
-import ManageClients from '@/pages/ManageClients';
-import AdminStats from '@/pages/AdminStats';
-import AdminSettings from '@/pages/AdminSettings';
-import ManageStaff from '@/pages/ManageStaff';
-import ManageSchedule from '@/pages/ManageSchedule';
-import ManageHomeContent from '@/pages/ManageHomeContent';
-import Profile from '@/pages/Profile';
-// Auth boilerplate pages
-import Login from '@/pages/Login';
-import Register from '@/pages/Register';
-import ForgotPassword from '@/pages/ForgotPassword';
-import ResetPassword from '@/pages/ResetPassword';
 import { ThemeProvider } from "@/lib/ThemeContext";
+
+const About = lazy(() => import('@/pages/About'));
+const Contact = lazy(() => import('@/pages/Contact'));
+const Booking = lazy(() => import('@/pages/Booking'));
+const MyBookings = lazy(() => import('@/pages/MyBookings'));
+const AdminDashboard = lazy(() => import('@/pages/AdminDashboard'));
+const ManageServices = lazy(() => import('@/pages/ManageServices'));
+const ManageClients = lazy(() => import('@/pages/ManageClients'));
+const AdminStats = lazy(() => import('@/pages/AdminStats'));
+const AdminSettings = lazy(() => import('@/pages/AdminSettings'));
+const ManageStaff = lazy(() => import('@/pages/ManageStaff'));
+const ManageSchedule = lazy(() => import('@/pages/ManageSchedule'));
+const ManageHomeContent = lazy(() => import('@/pages/ManageHomeContent'));
+const Profile = lazy(() => import('@/pages/Profile'));
+//Auth boilerplate pages
+const Login = lazy(() => import('@/pages/Login'));
+const Register = lazy(() => import('@/pages/Register'));
+const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
+const VerifyEmail = lazy(() => import('@/pages/VerifyEmail'));
+
+function RouteSkeleton() {
+  return (
+    <div className="mx-auto w-full max-w-6xl px-4 pt-28 sm:px-6">
+      <Skeleton className="h-8 w-48" />
+      <div className="mt-6 space-y-3">
+        <Skeleton className="h-32 w-full rounded-2xl" />
+        <Skeleton className="h-32 w-full rounded-2xl" />
+      </div>
+    </div>
+  );
+}
 
 function App() {
   const handleRefresh = () => window.location.reload();
@@ -42,6 +57,7 @@ function App() {
         <Router>
           <ScrollToTop />
           <PullToRefresh onRefresh={handleRefresh}>
+          <Suspense fallback={<RouteSkeleton />}>
           <AnimatedRoutes>
             <Route path="/" element={<Landing />} />
             <Route path="/about" element={<About />} />
@@ -50,21 +66,25 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
               <Route path="/prenota" element={<Booking />} />
               <Route path="/le-mie-prenotazioni" element={<MyBookings />} />
               <Route path="/profilo" element={<Profile />} />
-              <Route path="/admin" element={<AdminDashboard />} />
-              <Route path="/admin/servizi" element={<ManageServices />} />
-              <Route path="/admin/clienti" element={<ManageClients />} />
-              <Route path="/admin/statistiche" element={<AdminStats />} />
-              <Route path="/admin/impostazioni" element={<AdminSettings />} />
-              <Route path="/admin/staff" element={<ManageStaff />} />
-              <Route path="/admin/orari" element={<ManageSchedule />} />
-              <Route path="/admin/contenuti" element={<ManageHomeContent />} />
+              <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} requireAdmin />}>
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/servizi" element={<ManageServices />} />
+                <Route path="/admin/clienti" element={<ManageClients />} />
+                <Route path="/admin/statistiche" element={<AdminStats />} />
+                <Route path="/admin/impostazioni" element={<AdminSettings />} />
+                <Route path="/admin/staff" element={<ManageStaff />} />
+                <Route path="/admin/orari" element={<ManageSchedule />} />
+                <Route path="/admin/contenuti" element={<ManageHomeContent />} />
+              </Route>
             </Route>
             <Route path="*" element={<PageNotFound />} />
           </AnimatedRoutes>
+          </Suspense>
           </PullToRefresh>
           <BottomNav />
         </Router>

@@ -1,25 +1,21 @@
 import React, { useEffect, useState } from "react";
-import { Link, Navigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { Link } from "react-router-dom";
+import { clientsApi } from "@/api/contentApi";
 import { Button } from "@/components/ui/button";
 import { Users, Mail, Phone, Tag, Loader2, ArrowLeft } from "lucide-react";
 import AdminHeader from "@/components/layout/AdminHeader";
-import { useAuth } from "@/lib/AuthContext";
 import { formatDateIT } from "@/lib/salonConfig";
 
 export default function ManageClients() {
-  const { user } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    base44.entities.User.list()
-      .then((items) => setUsers(items || []))
+    clientsApi.adminList()
+      .then((res) => setUsers(res.users || []))
       .catch(() => setUsers([]))
       .finally(() => setLoading(false));
   }, []);
-
-  if (user && user.role !== "admin") return <Navigate to="/" replace />;
 
   const clients = users.filter((u) => u.role !== "admin");
 
@@ -46,15 +42,15 @@ export default function ManageClients() {
               <div key={u.id} className="rounded-2xl border border-border bg-card p-4">
                 <div className="flex items-start justify-between">
                   <div className="min-w-0">
-                    <p className="font-medium">{u.full_name || "—"}</p>
+                    <p className="font-medium">{u.firstName ? `${u.firstName} ${u.lastName}` : "—"}</p>
                     <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground"><Mail className="h-3.5 w-3.5" />{u.email}</p>
-                    {(u.phone || u.data?.phone) && <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground"><Phone className="h-3.5 w-3.5" />{u.phone || u.data.phone}</p>}
+                    {u.phone && <p className="mt-0.5 flex items-center gap-1.5 text-sm text-muted-foreground"><Phone className="h-3.5 w-3.5" />{u.phone}</p>}
                   </div>
                   <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs text-muted-foreground">
                     <Tag className="mr-1 h-3 w-3" />{u.role}
                   </span>
                 </div>
-                <p className="mt-2 text-xs text-muted-foreground">Registrato il {formatDateIT(u.created_date.slice(0, 10))}</p>
+                <p className="mt-2 text-xs text-muted-foreground">Registrato il {formatDateIT(u.createdAt.slice(0, 10))}</p>
               </div>
             ))}
           </div>

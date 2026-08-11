@@ -2,13 +2,15 @@ import * as React from "react"
 import { useSize } from "@/hooks/use-size"
 import { cn } from "@/lib/utils"
 
+// Placeholder locale (nessuna dipendenza esterna): un rettangolo grigio neutro,
+// finché non viene introdotto il caricamento immagini per l'admin.
 const FALLBACK_IMAGE_URL =
-  "https://static.wixstatic.com/media/12d367_4f26ccd17f8f4e3a8958306ea08c2332~mv2.png"
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23e5e7eb'/%3E%3C/svg%3E"
 
-// Wix Media Platform hosts whose images support /v1/ transform URLs
-// (resize, focal-point crop, and format conversion via the OUTPUT FILENAME
-// EXTENSION — a .webp output re-encodes JPG/PNG uploads to WebP on the fly).
-const WIX_MEDIA_HOSTS = ["media.base44.com", "static.wixstatic.com"]
+// Host che supportano le transform URL /v1/ (resize, focal-point crop, conversione
+// formato via estensione file di output). Vuoto finché non si sceglie il provider
+// di storage immagini S3-compatibile: nessun collegamento esterno nel frattempo.
+const WIX_MEDIA_HOSTS = []
 // First-paint width before the container is measured.
 const DEFAULT_TRANSFORM_WIDTH = 1024
 const DEVICE_PIXEL_RATIOS = [1, 2, 3]
@@ -166,11 +168,11 @@ const ResponsiveImage = React.forwardRef(
 ResponsiveImage.displayName = "ResponsiveImage"
 
 /**
- * Image with built-in Wix Media Platform support: URLs on media.base44.com /
- * static.wixstatic.com are served resized to the rendered container (per
- * device pixel ratio) and re-encoded to WebP; `fittingType="fill"` crops
- * server-side, optionally anchored at a focal point. Other URLs render as a
- * plain <img>. Failed loads swap to a fallback image.
+ * Image con supporto opzionale per host CDN in WIX_MEDIA_HOSTS (transform URL
+ * /v1/: resize per device pixel ratio, crop server-side, conversione a WebP) —
+ * lista vuota finché non si sceglie il provider di storage immagini. Ogni altra
+ * URL (incluso il caso vuoto/placeholder) renderizza come <img> semplice.
+ * Failed loads swap to a fallback image.
  */
 const Image = React.forwardRef(
   (

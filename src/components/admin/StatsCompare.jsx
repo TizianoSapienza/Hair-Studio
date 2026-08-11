@@ -42,7 +42,7 @@ export default function StatsCompare({ labelA, labelB, dataA, dataB }) {
                 <p className="truncate text-[11px] font-medium text-brand/80">{labelB}</p>
                 <p className="mt-1 font-heading text-base font-semibold leading-tight">{vb}</p>
                 {delta && (
-                  <p className={`mt-1 inline-flex items-center gap-0.5 text-[11px] font-medium ${delta.neutral ? "text-muted-foreground" : delta.up ? "text-emerald-600" : "text-red-600"}`}>
+                  <p className={`mt-1 inline-flex items-center gap-0.5 text-[11px] font-medium ${delta.neutral ? "text-muted-foreground" : delta.up ? "text-success" : "text-destructive"}`}>
                     {delta.neutral ? <Minus className="h-3 w-3" /> : delta.up ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
                     {delta.text}
                   </p>

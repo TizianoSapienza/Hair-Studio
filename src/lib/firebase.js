@@ -2,16 +2,15 @@ import { initializeApp } from "firebase/app";
 import { getMessaging, getToken, isSupported } from "firebase/messaging";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD3XWHvDCL2p5UGNYxtOJxZZ1CLwYqEl9k",
-  authDomain: "hair-studio-331f8.firebaseapp.com",
-  projectId: "hair-studio-331f8",
-  storageBucket: "hair-studio-331f8.firebasestorage.app",
-  messagingSenderId: "492860802967",
-  appId: "1:492860802967:web:d546403be8e0484ec4a6d2"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
-export const FCM_VAPID_KEY =
-  "BB9-YrbESCfzJ2Ngvuw39wtjOSvY8O_Fd8-0ZqvTv9Zin3FxeSQ5otit9wnhiosL0imXgIe3EJ70kyGyoxMsj9w";
+export const FCM_VAPID_KEY = import.meta.env.VITE_FIREBASE_VAPID_KEY;
 
 let _app = null;
 let _messaging = null;
@@ -23,6 +22,7 @@ function getApp() {
 
 export async function getMessagingInstance() {
   try {
+    if (!firebaseConfig.apiKey || !FCM_VAPID_KEY) return null;
     const supported = await isSupported();
     if (!supported) return null;
     if (!_messaging) _messaging = getMessaging(getApp());

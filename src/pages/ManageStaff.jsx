@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Link, Navigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { staffApi } from "@/api/catalogApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,25 +9,26 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Pencil, Loader2, UserCircle2, ArrowLeft, GripVertical } from "lucide-react";
 import { Image } from "@/components/ui/image";
+import { ImageUploadField } from "@/components/admin/ImageUploadField";
 import AdminHeader from "@/components/layout/AdminHeader";
-import { useAuth } from "@/lib/AuthContext";
 import { toast } from "sonner";
+import { extractError } from "@/lib/apiError";
 
 export default function ManageStaff() {
-  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", photo_url: "", specialization: "" });
+  const [form, setForm] = useState({ name: "", photoUrl: "", specialization: "" });
   const [saving, setSaving] = useState(false);
   const [reordering, setReordering] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const items = await base44.entities.Staff.list("order");
-      setStaff(items || []);
+      const res = await staffApi.adminList();
+      setStaff(res.staff || []);
     } catch {
       setStaff([]);
     } finally {
@@ -35,29 +37,30 @@ export default function ManageStaff() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  if (user && user.role !== "admin") return <Navigate to="/" replace />;
-
   const openEdit = (s) => {
     setEditing(s);
-    setForm({ name: s.name || "", photo_url: s.photo_url || "", specialization: s.specialization || "" });
+    setForm({ name: s.name || "", photoUrl: s.photoUrl || "", specialization: s.specialization || "" });
     setOpen(true);
   };
+
+
 
   const handleSave = async (e) => {
     e.preventDefault();
     if (!form.name) { toast.error("Il nome è obbligatorio"); return; }
     setSaving(true);
     try {
-      await base44.entities.Staff.update(editing.id, {
+      await staffApi.adminUpdate(editing.id, {
         name: form.name,
-        photo_url: form.photo_url || "",
+        photoUrl: form.photoUrl || "",
         specialization: form.specialization || "",
       });
+      queryClient.invalidateQueries({ queryKey: ["site_data"] });
       toast.success("Operatore aggiornato");
       setOpen(false);
       await load();
     } catch (err) {
-      toast.error("Errore", { description: err.message });
+      toast.error("Errore", { description: extractError(err) });
     } finally {
       setSaving(false);
     }
@@ -71,10 +74,9 @@ export default function ManageStaff() {
     setStaff(reordered);
     setReordering(true);
     try {
-      const updates = reordered.map((s, i) => ({ id: s.id, order: i }));
-      await base44.entities.Staff.bulkUpdate(updates);
+      await staffApi.adminReorder(reordered.map((s) => s.id));
     } catch (err) {
-      toast.error("Errore nel riordino");
+      toast.error("Errore nel riordino", { description: extractError(err) });
       await load();
     } finally {
       setReordering(false);
@@ -88,7 +90,10 @@ export default function ManageStaff() {
         <div className="mb-6">
           <Button asChild variant="ghost" size="sm" className="mb-2 -ml-2 hidden md:inline-flex"><Link to="/admin"><ArrowLeft className="mr-2 h-4 w-4" /> Dashboard</Link></Button>
           <h1 className="font-heading text-3xl font-semibold tracking-tight">Operatori</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Trascina le card per modificare l'ordine nella home. Modifica nome, foto e specializzazione.</p>
+          <p className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+            Trascina le card per modificare l'ordine nella home. Modifica nome, foto e specializzazione.
+            {reordering && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+          </p>
         </div>
 
         {loading ? (
@@ -100,7 +105,7 @@ export default function ManageStaff() {
           </div>
         ) : (
           <DragDropContext onDragEnd={onDragEnd}>
-            <Droppable droppableId="staff">
+            <Droppable droppableId="staff" isDropDisabled={reordering}>
               {(provided) => (
                 <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-3">
                   {staff.map((s, index) => (
@@ -110,8 +115,8 @@ export default function ManageStaff() {
                           <div {...prov.dragHandleProps} className="cursor-grab text-muted-foreground">
                             <GripVertical className="h-5 w-5" />
                           </div>
-                          {s.photo_url ? (
-                            <Image src={s.photo_url} className="h-12 w-12 rounded-full object-cover" fittingType="fill" />
+                          {s.photoUrl ? (
+                            <Image src={s.photoUrl} className="h-12 w-12 rounded-full object-cover" fittingType="fill" />
                           ) : (
                             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-secondary"><UserCircle2 className="h-6 w-6 text-muted-foreground" /></div>
                           )}
@@ -140,10 +145,12 @@ export default function ManageStaff() {
               <Label htmlFor="name">Nome</Label>
               <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="photo">URL Foto</Label>
-              <Input id="photo" value={form.photo_url} onChange={(e) => setForm({ ...form, photo_url: e.target.value })} placeholder="https://..." />
-            </div>
+            <ImageUploadField
+              label="Foto"
+              value={form.photoUrl}
+              onChange={(url) => setForm({ ...form, photoUrl: url })}
+              folder="staff"
+            />
             <div className="space-y-2">
               <Label htmlFor="spec">Specializzazione</Label>
               <Input id="spec" value={form.specialization} onChange={(e) => setForm({ ...form, specialization: e.target.value })} placeholder="es. Taglio uomo, Barba" />

@@ -1,28 +1,27 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { base44 } from "@/api/base44Client";
+import { bookingsApi } from "@/api/bookingsApi";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarDays, Ban, Loader2, Scissors, Clock } from "lucide-react";
 import SiteHeader from "@/components/layout/SiteHeader";
-import { useAuth } from "@/lib/AuthContext";
 import { toast } from "sonner";
 import { formatDateIT } from "@/lib/salonConfig";
 
 export default function MyBookings() {
-  const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  const { data: bookings = [], isLoading: loading, refetch } = useQuery({
+  const { data: bookings = [], isLoading: loading } = useQuery({
     queryKey: ["myBookings"],
     queryFn: async () => {
-      const items = await base44.entities.Booking.list("-date");
-      return items || [];
+      const res = await bookingsApi.listMine();
+      return res.bookings || [];
     },
   });
 
   const cancelMutation = useMutation({
-    mutationFn: async (id) => base44.functions.invoke("CancelBooking", { booking_id: id }),
+    mutationFn: async (id) => bookingsApi.cancelMine(id),
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ["myBookings"] });
       const previous = queryClient.getQueryData(["myBookings"]);
@@ -36,15 +35,9 @@ export default function MyBookings() {
     onSuccess: () => toast.success("Prenotazione cancellata"),
   });
 
-  // Aggiornamento real-time della lista prenotazioni
-  useEffect(() => {
-    const unsub = base44.entities.Booking.subscribe(() => { queryClient.invalidateQueries({ queryKey: ["myBookings"] }); });
-    return unsub;
-  }, [queryClient]);
-
   const upcoming = bookings
-    .filter((b) => b.status === "booked" || b.status === "confirmed" || b.status === "completed")
-    .sort((a, b) => (a.date + a.start_time).localeCompare(b.date + b.start_time));
+    .filter((b) => ["in_attesa", "confermata", "completata"].includes(b.status))
+    .sort((a, b) => (a.bookingDate + a.startTime).localeCompare(b.bookingDate + b.startTime));
 
   return (
     <div className="flex min-h-screen flex-col bg-secondary/30">
@@ -59,7 +52,18 @@ export default function MyBookings() {
         </div>
 
         {loading ? (
-            <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            <ul className="space-y-3">
+              {[0, 1, 2].map((i) => (
+                <li key={i} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-5">
+                  <div className="space-y-2">
+                    <Skeleton className="h-5 w-40" />
+                    <Skeleton className="h-4 w-56" />
+                    <Skeleton className="h-4 w-32" />
+                  </div>
+                  <Skeleton className="h-9 w-24 rounded-full" />
+                </li>
+              ))}
+            </ul>
           ) : upcoming.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center">
               <Scissors className="mx-auto h-10 w-10 text-muted-foreground" />
@@ -72,27 +76,27 @@ export default function MyBookings() {
               {upcoming.map((b) => (
                 <li key={b.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-5">
                   <div>
-                    <p className="font-heading text-lg font-semibold">{b.service_name}</p>
+                    <p className="font-heading text-lg font-semibold">{b.serviceName}</p>
                     <p className="mt-0.5 flex items-center gap-2 text-sm text-muted-foreground">
                       <Clock className="h-4 w-4 text-brand" />
-                      <span className="capitalize">{formatDateIT(b.date)}</span> · ore {b.start_time}
+                      <span className="capitalize">{formatDateIT(b.bookingDate)}</span> · ore {b.startTime}
                     </p>
                     <p className="mt-1.5 flex items-center gap-1.5 text-sm">
                       <Scissors className="h-4 w-4 text-primary" />
-                      <span className="font-medium text-foreground">{b.staff_name || "Primo disponibile"}</span>
+                      <span className="font-medium text-foreground">{b.staffName || "Primo disponibile"}</span>
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-2">
-                    {b.status === "booked" && (
-                      <span className="inline-flex items-center rounded-full bg-amber-50 px-3 py-1.5 text-xs font-medium text-amber-700 dark:bg-amber-900/40 dark:text-amber-200">In attesa</span>
+                    {b.status === "in_attesa" && (
+                      <span className="inline-flex items-center rounded-full bg-warning-soft px-3 py-1.5 text-xs font-medium text-warning-soft-foreground">In attesa</span>
                     )}
-                    {b.status === "confirmed" && (
-                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-200">Confermata</span>
+                    {b.status === "confermata" && (
+                      <span className="inline-flex items-center rounded-full bg-info-soft px-3 py-1.5 text-xs font-medium text-info-soft-foreground">Confermata</span>
                     )}
-                    {b.status === "completed" && (
-                      <span className="inline-flex items-center rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700">Completato</span>
+                    {b.status === "completata" && (
+                      <span className="inline-flex items-center rounded-full bg-success-soft px-3 py-1.5 text-xs font-medium text-success-soft-foreground">Completato</span>
                     )}
-                    {b.status !== "completed" && (
+                    {b.status !== "completata" && (
                       <Button variant="outline" onClick={() => cancelMutation.mutate(b.id)} disabled={cancelMutation.isPending && cancelMutation.variables === b.id}>
                         {cancelMutation.isPending && cancelMutation.variables === b.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Ban className="mr-2 h-4 w-4" />}
                         Cancella

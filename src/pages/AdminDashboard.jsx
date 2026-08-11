@@ -1,22 +1,16 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
-import { Link, Navigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { Link } from "react-router-dom";
+import { bookingsApi } from "@/api/bookingsApi";
 import { Button } from "@/components/ui/button";
-import { CalendarDays, LayoutDashboard, Scissors, Users, CheckCircle2, Ban, TrendingUp, Settings, Loader2, UserCircle2, CalendarClock, FileText } from "lucide-react";
+import { CalendarDays, LayoutDashboard, Scissors, Users, CheckCircle2, Ban, TrendingUp, Settings, UserCircle2, CalendarClock, FileText } from "lucide-react";
 import AdminHeader from "@/components/layout/AdminHeader";
+import { Skeleton } from "@/components/ui/skeleton";
 import CalendarView from "@/components/booking/CalendarView";
-import { useAuth } from "@/lib/AuthContext";
-
-function toDateString(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
+import { useAdminEvents } from "@/hooks/useAdminEvents";
+import { toDateString } from "@/lib/dateUtils";
 
 export default function AdminDashboard() {
-  const { user } = useAuth();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const [date, setDate] = useState(today);
@@ -38,14 +32,15 @@ export default function AdminDashboard() {
       const lastDay = new Date(year, month + 1, 0).getDate();
       const monthEnd = `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
 
-      const [dayBookings, monthBookings] = await Promise.all([
-        base44.entities.Booking.filter({ date: selDateStr }, undefined, 200),
-        base44.entities.Booking.filter({ date: { $gte: monthStart, $lte: monthEnd } }, undefined, 1000),
+      const [dayBookings, monthStats] = await Promise.all([
+        bookingsApi.adminList({ date: selDateStr }),
+        bookingsApi.adminStats({ from: monthStart, to: monthEnd }),
       ]);
 
-      const todayCount = (dayBookings || []).filter((b) => b.status === "booked" || b.status === "confirmed" || b.status === "completed" || b.status === "no_show").length;
-      const completedMonth = (monthBookings || []).filter((b) => b.status === "completed" || b.status === "no_show").length;
-      const noShowMonth = (monthBookings || []).filter((b) => b.status === "no_show").length;
+      const countByStatus = (status) => (monthStats.byStatus || []).find((s) => s.status === status)?.count || 0;
+      const todayCount = (dayBookings.bookings || []).filter((b) => ["in_attesa", "confermata", "completata", "no_show"].includes(b.status)).length;
+      const completedMonth = countByStatus("completata") + countByStatus("no_show");
+      const noShowMonth = countByStatus("no_show");
 
       if (myId === statsIdRef.current) setStats({ today: todayCount, completedMonth, noShowMonth });
     } catch {
@@ -57,24 +52,19 @@ export default function AdminDashboard() {
 
   useEffect(() => { loadStats(); }, [loadStats, refreshKey]);
 
-  // Aggiornamento real-time delle statistiche
-  useEffect(() => {
-    const unsub = base44.entities.Booking.subscribe(() => { setRefreshKey((k) => k + 1); });
-    return unsub;
-  }, []);
-
-  if (user && user.role !== "admin") return <Navigate to="/" replace />;
+  //Aggiornamento real-time delle statistiche
+  useAdminEvents(() => setRefreshKey((k) => k + 1));
 
   const STATS = [
     { label: "Oggi", value: stats.today, icon: CalendarDays, color: "text-primary", bg: "bg-primary/10" },
-    { label: "Completati (mese sel.)", value: stats.completedMonth, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "No-show (mese sel.)", value: stats.noShowMonth, icon: Ban, color: "text-red-600", bg: "bg-red-50" },
+    { label: "Completati (mese sel.)", value: stats.completedMonth, icon: CheckCircle2, color: "text-success", bg: "bg-success-soft" },
+    { label: "No-show (mese sel.)", value: stats.noShowMonth, icon: Ban, color: "text-destructive", bg: "bg-destructive-soft" },
   ];
 
   return (
     <div className="flex min-h-screen flex-col bg-secondary/30">
       <AdminHeader />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
         <div className="mb-6 space-y-4">
           <div>
             <p className="inline-flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wider text-primary">
@@ -82,14 +72,23 @@ export default function AdminDashboard() {
             </p>
             <h1 className="mt-1 font-heading text-3xl font-semibold tracking-tight">Gestione salone</h1>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline" size="sm"><Link to="/admin/staff"><UserCircle2 className="mr-2 h-4 w-4" /> Staff</Link></Button>
-            <Button asChild variant="outline" size="sm"><Link to="/admin/orari"><CalendarClock className="mr-2 h-4 w-4" /> Orari</Link></Button>
-            <Button asChild variant="outline" size="sm"><Link to="/admin/servizi"><Scissors className="mr-2 h-4 w-4" /> Servizi</Link></Button>
-            <Button asChild variant="outline" size="sm"><Link to="/admin/clienti"><Users className="mr-2 h-4 w-4" /> Clienti</Link></Button>
-            <Button asChild variant="outline" size="sm"><Link to="/admin/statistiche"><TrendingUp className="mr-2 h-4 w-4" /> Statistiche</Link></Button>
-            <Button asChild variant="outline" size="sm"><Link to="/admin/impostazioni"><Settings className="mr-2 h-4 w-4" /> Impostazioni</Link></Button>
-            <Button asChild variant="outline" size="sm"><Link to="/admin/contenuti"><FileText className="mr-2 h-4 w-4" /> Contenuti</Link></Button>
+          <div className="flex flex-wrap items-start gap-x-5 gap-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="w-full text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:w-auto sm:mr-1">Operatività</span>
+              <Button asChild variant="outline" size="sm"><Link to="/admin/staff"><UserCircle2 className="mr-2 h-4 w-4" /> Staff</Link></Button>
+              <Button asChild variant="outline" size="sm"><Link to="/admin/orari"><CalendarClock className="mr-2 h-4 w-4" /> Orari</Link></Button>
+              <Button asChild variant="outline" size="sm"><Link to="/admin/servizi"><Scissors className="mr-2 h-4 w-4" /> Servizi</Link></Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="w-full text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:w-auto sm:mr-1">Business</span>
+              <Button asChild variant="outline" size="sm"><Link to="/admin/clienti"><Users className="mr-2 h-4 w-4" /> Clienti</Link></Button>
+              <Button asChild variant="outline" size="sm"><Link to="/admin/statistiche"><TrendingUp className="mr-2 h-4 w-4" /> Statistiche</Link></Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="w-full text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:w-auto sm:mr-1">Configurazione</span>
+              <Button asChild variant="outline" size="sm"><Link to="/admin/impostazioni"><Settings className="mr-2 h-4 w-4" /> Impostazioni</Link></Button>
+              <Button asChild variant="outline" size="sm"><Link to="/admin/contenuti"><FileText className="mr-2 h-4 w-4" /> Contenuti</Link></Button>
+            </div>
           </div>
         </div>
 
@@ -102,7 +101,7 @@ export default function AdminDashboard() {
                 </div>
                 <p className="text-xs font-medium text-muted-foreground">{s.label}</p>
               </div>
-              {loadingStats && !hasLoaded ? <Loader2 className="mt-3 h-6 w-6 animate-spin text-muted-foreground" /> : <p className={`mt-3 font-heading text-2xl font-semibold ${loadingStats ? "opacity-60" : ""}`}>{s.value}</p>}
+              {loadingStats && !hasLoaded ? <Skeleton className="mt-3 h-8 w-12" /> : <p className={`mt-3 font-heading text-2xl font-semibold ${loadingStats ? "opacity-60" : ""}`}>{s.value}</p>}
             </div>
           ))}
         </div>

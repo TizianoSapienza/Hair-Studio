@@ -1,31 +1,12 @@
-import { useState, useEffect, useCallback } from "react";
-import { base44 } from "@/api/base44Client";
+import { useQuery } from "@tanstack/react-query";
+import { siteDataQueryOptions } from "@/hooks/useSiteData";
 
-// Il caching localStorage dei servizi è stato rimosso: interferiva con la
-// persistenza del token di sessione. Queste funzioni rimangono come no-op
-// per compatibilità con i componenti che le importano (es. ManageServices).
-export function clearServicesCache() {}
-export function getCachedServices() { return null; }
-export function setCachedServices() {}
-
+//Stessa query condivisa di useBusinessInfo/useHomepageContent (vedi useSiteData.jsx):
+//forma standard react-query { data, isLoading, ... }
 export default function useServices() {
-  const [services, setServices] = useState([]);
-  const [loading, setLoading] = useState(true);
+  return useQuery({ ...siteDataQueryOptions, select: (data) => data?.services || [] });
+}
 
-  const fetchServices = useCallback(async () => {
-    try {
-      const items = await base44.entities.Service.list("order");
-      setServices((items || []).filter((s) => s.active !== false));
-    } catch (e) {
-      /* mantieni stato vuoto in caso di errore di rete */
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => { fetchServices(); }, [fetchServices]);
-
-  const refresh = useCallback(() => { fetchServices(); }, [fetchServices]);
-
-  return { services, loading, refresh };
+export function usePublicStaff() {
+  return useQuery({ ...siteDataQueryOptions, select: (data) => data?.staff || [] });
 }

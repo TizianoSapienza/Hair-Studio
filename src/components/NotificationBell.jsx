@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
-import { Bell, Check, CheckCheck, Loader2 } from "lucide-react";
+import { notificationsApi } from "@/api/notificationsApi";
+import { Bell, CheckCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/lib/AuthContext";
+import { useSse } from "@/hooks/useSse";
 
 function timeAgo(dateStr) {
   if (!dateStr) return "";
@@ -32,45 +33,55 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const unread = items.filter((n) => !n.letta).length;
+  const unread = items.filter((n) => !n.isRead).length;
 
   const loadingRef = useRef(false);
   const load = async () => {
     if (!user || loadingRef.current) return;
     loadingRef.current = true;
     try {
-      const list = await base44.entities.Notification.filter({ user_id: user.id }, "-created_date", 20);
-      setItems(list || []);
-    } catch (e) {} finally { loadingRef.current = false; }
+      const res = await notificationsApi.list();
+      setItems(res.notifications || []);
+    } catch (e) {
+      console.warn("Impossibile caricare le notifiche", e);
+    } finally {
+      loadingRef.current = false;
+    }
   };
 
   useEffect(() => {
+    if (!user?.id) return;
     load();
-    const unsub = base44.entities.Notification.subscribe(() => { load(); });
-    return unsub;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  useSse("/notifications/stream", () => load(), !!user?.id);
 
   const markRead = async (n) => {
     try {
-      await base44.entities.Notification.update(n.id, { letta: true });
-      setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, letta: true } : x)));
-    } catch (e) {}
+      await notificationsApi.markRead(n.id);
+      setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)));
+    } catch (e) {
+      console.warn("Impossibile segnare la notifica come letta", e);
+    }
   };
 
   const markAllRead = async () => {
     if (!user || unread === 0) return;
     setBusy(true);
     try {
-      await base44.entities.Notification.updateMany({ user_id: user.id, letta: false }, { $set: { letta: true } });
-      setItems((prev) => prev.map((x) => ({ ...x, letta: true })));
-    } catch (e) {} finally { setBusy(false); }
+      await notificationsApi.markAllRead();
+      setItems((prev) => prev.map((x) => ({ ...x, isRead: true })));
+    } catch (e) {
+      console.warn("Impossibile segnare tutte le notifiche come lette", e);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleClick = async (n) => {
-    if (!n.letta) await markRead(n);
+    if (!n.isRead) await markRead(n);
     setOpen(false);
-    if (n.booking_id) {
+    if (n.bookingId) {
       navigate(user?.role === "admin" ? "/admin" : "/le-mie-prenotazioni");
     }
   };
@@ -79,7 +90,7 @@ export default function NotificationBell() {
     <Button variant="ghost" size="icon" className="relative h-9 w-9" aria-label="Notifiche">
       <Bell className="h-5 w-5" />
       {unread > 0 && (
-        <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground">
+        <span className="badge-pop-in absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground">
           {unread > 9 ? "9+" : unread}
         </span>
       )}
@@ -105,10 +116,10 @@ export default function NotificationBell() {
             {items.map((n) => (
               <li key={n.id}>
                 <button type="button" onClick={() => handleClick(n)} className="flex w-full items-start gap-2.5 px-3 py-3 text-left transition-colors hover:bg-accent/50">
-                  <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.letta ? "bg-transparent" : "bg-primary"}`} />
+                  <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.isRead ? "bg-transparent" : "bg-primary"}`} />
                   <div className="min-w-0 flex-1">
-                    <p className={`text-sm ${n.letta ? "text-muted-foreground" : "font-medium text-foreground"}`}>{n.messaggio}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{timeAgo(n.created_date)}</p>
+                    <p className={`text-sm ${n.isRead ? "text-muted-foreground" : "font-medium text-foreground"}`}>{n.message}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{timeAgo(n.createdAt)}</p>
                   </div>
                 </button>
               </li>
