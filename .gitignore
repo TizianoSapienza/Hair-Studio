@@ -33,3 +33,4 @@ dist-ssr
 /docs
 .claude
 .impeccable
+.graphify-out
