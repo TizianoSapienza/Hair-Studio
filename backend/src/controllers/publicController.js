@@ -40,7 +40,7 @@ export const getClosures = asyncHandler(async (req, res) => {
 });
 
 // Vista pubblica del calendario: SOLO libero/occupato (+ conteggio operatori liberi se
-// staff_id è "any"/assente), mai dettagli della prenotazione (privacy, vedi CLAUDE.md).
+// staff_id è "any"/assente), mai dettagli della prenotazione.
 export const getPublicCalendar = asyncHandler(async (req, res) => {
   const { date, staff_id: staffId } = req.query;
   const { open, reason, slotMinutes, slots } = await getDayOverview(date, staffId, {
