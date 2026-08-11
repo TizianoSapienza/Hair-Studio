@@ -3,7 +3,7 @@ import { accountApi, authApi } from "@/api/authApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mail, Phone, Loader2, Save, Trash2, KeyRound, UserCircle, Eye, EyeOff, Check, X } from "lucide-react";
+import { Mail, Phone, Loader2, Save, Trash2, KeyRound, UserCircle } from "lucide-react";
 import SiteHeader from "@/components/layout/SiteHeader";
 import { splitPhone } from "@/lib/phone";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,7 +11,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { PASSWORD_REGEX } from "@/lib/passwordRules";
 
 const CountryCodeSelect = React.lazy(() => import("@/components/profile/CountryCodeSelect"));
 
@@ -26,18 +25,7 @@ export default function Profile() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showNew, setShowNew] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [changingPwd, setChangingPwd] = useState(false);
-
-  const pwdReqs = {
-    len: newPassword.length >= 8,
-    letter: /[A-Za-z]/.test(newPassword),
-    number: /\d/.test(newPassword),
-    special: /[^A-Za-z\d]/.test(newPassword),
-  };
+  const [resetSending, setResetSending] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -76,28 +64,14 @@ export default function Profile() {
     }
   };
 
-  const handlePasswordChange = async (e) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      toast.error("Le password non coincidono");
-      return;
-    }
-    if (!PASSWORD_REGEX.test(newPassword)) {
-      toast.error("Password non valida", { description: "Serve almeno 8 caratteri, una lettera, un numero e un carattere speciale." });
-      return;
-    }
-    setChangingPwd(true);
+  const handleSendReset = async () => {
+    setResetSending(true);
     try {
-      await authApi.changePassword({ newPassword });
-    } catch (err) {
-      toast.error("Errore", { description: err.message });
-      setChangingPwd(false);
-      return;
+      await authApi.forgotPassword({ email: user.email });
+      toast.success("Email inviata", { description: "Controlla la tua casella di posta per il link di reset." });
+    } finally {
+      setResetSending(false);
     }
-    //Il cambio password revoca tutte le sessioni lato server: si riporta l'utente al login.
-    toast.success("Password aggiornata, effettua di nuovo l'accesso");
-    await logout();
-    navigate("/login");
   };
 
   const handleDelete = async (e) => {
@@ -177,44 +151,10 @@ export default function Profile() {
 
         <div className="mt-6 rounded-2xl border border-border bg-card p-6">
           <h2 className="flex items-center gap-2 font-heading text-lg font-semibold"><KeyRound className="h-5 w-5 text-primary" /> Sicurezza</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Inserisci la nuova password per aggiornarla direttamente.</p>
-          <form onSubmit={handlePasswordChange} className="mt-4 space-y-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="new_password">Nuova password</Label>
-                <div className="relative">
-                  <Input id="new_password" type={showNew ? "text" : "password"} autoComplete="new-password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="••••••••" required />
-                  <button type="button" onClick={() => setShowNew((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label="Mostra password">
-                    {showNew ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirm_password">Conferma password</Label>
-                <div className="relative">
-                  <Input id="confirm_password" type={showConfirm ? "text" : "password"} autoComplete="new-password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" required />
-                  <button type="button" onClick={() => setShowConfirm((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label="Mostra password">
-                    {showConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-            </div>
-            <ul className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
-              {[
-                ["len", "Min. 8 caratteri"],
-                ["letter", "Una lettera"],
-                ["number", "Un numero"],
-                ["special", "Carattere speciale"],
-              ].map(([k, l]) => (
-                <li key={k} className={`flex items-center gap-1.5 ${pwdReqs[k] ? "text-success" : "text-muted-foreground"}`}>
-                  {pwdReqs[k] ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />} {l}
-                </li>
-              ))}
-            </ul>
-            <Button type="submit" variant="outline" disabled={changingPwd || !user}>
-              {changingPwd ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />} Aggiorna password
-            </Button>
-          </form>
+          <p className="mt-1 text-sm text-muted-foreground">Ti invieremo un'email con un link per reimpostare la password.</p>
+          <Button variant="outline" className="mt-4" disabled={resetSending || !user} onClick={handleSendReset}>
+            {resetSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />} Invia email per reimpostare la password
+          </Button>
         </div>
 
         {!isAdmin && (

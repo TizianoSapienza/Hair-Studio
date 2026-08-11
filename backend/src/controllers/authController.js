@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
-import { env } from "../config/env.js";
+import { randomInt } from "node:crypto";
+import { env, isProduction } from "../config/env.js";
 import { pool } from "../db/pool.js";
 import {
   createUser,
@@ -19,10 +20,11 @@ import {
   signAccessToken,
 } from "../services/tokenService.js";
 import { sendEmail } from "../services/emailService.js";
+import { renderEmailLayout } from "../utils/emailTemplate.js";
 import { generateOpaqueToken, hashOpaqueToken } from "../utils/randomToken.js";
 import { escapeHtml } from "../utils/escapeHtml.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { badRequest, conflict, unauthorized } from "../utils/AppError.js";
+import { badRequest, conflict, forbidden, unauthorized } from "../utils/AppError.js";
 
 // Hash fittizio con cui confrontare la password quando l'utente non esiste, così bcrypt.compare
 // gira comunque e il tempo di risposta di login non rivela se l'email è registrata.
@@ -35,6 +37,40 @@ async function issueSessionAndRespond(res, user, req) {
     ipAddress: req.ip,
   });
   setAuthCookies(res, { accessToken, refreshToken });
+}
+
+const OTP_TTL_MS = 15 * 60 * 1000; // 15 minuti
+
+function generateOtpCode() {
+  return String(randomInt(100000, 999999));
+}
+
+async function issueAndSendOtp(user) {
+  const code = generateOtpCode();
+  const codeHash = hashOpaqueToken(code);
+  const expiresAt = new Date(Date.now() + OTP_TTL_MS);
+
+  await pool.query(
+    "UPDATE email_verification_codes SET used_at = now() WHERE user_id = $1 AND used_at IS NULL",
+    [user.id]
+  );
+  await pool.query(
+    "INSERT INTO email_verification_codes (user_id, code_hash, expires_at) VALUES ($1, $2, $3)",
+    [user.id, codeHash, expiresAt]
+  );
+
+  // In sviluppo il codice viene stampato in console: il DB lo salva hashato, quindi
+  // senza questo log non sarebbe recuperabile se l'invio email fallisce o è disattivato.
+  if (!isProduction) console.log(`[dev] Codice OTP per ${user.email}: ${code}`);
+
+  sendEmail({
+    to: user.email,
+    subject: "Conferma la tua email - Hair Studio",
+    html: renderEmailLayout({
+      title: "Conferma la tua email",
+      bodyHtml: `<p>Ciao ${escapeHtml(user.first_name)}, benvenuto su Hair Studio. Usa questo codice per confermare la tua email (valido 15 minuti):</p><p style="font-size:28px;font-weight:bold;letter-spacing:4px;">${code}</p>`,
+    }),
+  }).catch((err) => console.error("[auth] invio email verifica fallito", err));
 }
 
 export const register = asyncHandler(async (req, res) => {
@@ -50,14 +86,9 @@ export const register = asyncHandler(async (req, res) => {
   const passwordHash = await bcrypt.hash(password, env.bcryptCost);
   const user = await createUser({ firstName, lastName, email, phone, passwordHash });
 
-  sendEmail({
-    to: email,
-    subject: "Benvenuto su Hair Studio",
-    html: `<p>Ciao ${escapeHtml(firstName)}, la registrazione è avvenuta con successo.</p>`,
-  }).catch((err) => console.error("[auth] invio email registrazione fallito", err));
+  await issueAndSendOtp(user);
 
-  await issueSessionAndRespond(res, user, req);
-  res.status(201).json({ user: toPublicUser(user) });
+  res.status(201).json({ email: user.email, requiresVerification: true });
 });
 
 export const login = asyncHandler(async (req, res) => {
@@ -66,9 +97,46 @@ export const login = asyncHandler(async (req, res) => {
   const user = await findUserByEmail(email);
   const passwordMatches = await bcrypt.compare(password, user?.password_hash || DUMMY_PASSWORD_HASH);
   if (!user || !passwordMatches) throw unauthorized("Credenziali non valide");
+  if (!user.email_verified_at) throw forbidden("Email non verificata", { code: "EMAIL_NOT_VERIFIED" });
 
   await issueSessionAndRespond(res, user, req);
   res.json({ user: toPublicUser(user) });
+});
+
+export const verifyEmail = asyncHandler(async (req, res) => {
+  const { email, code } = req.body;
+
+  const user = await findUserByEmail(email);
+  if (!user) throw badRequest("Codice non valido o scaduto");
+
+  const codeHash = hashOpaqueToken(code);
+  const { rows } = await pool.query(
+    `SELECT id, expires_at, used_at FROM email_verification_codes
+     WHERE user_id = $1 AND code_hash = $2`,
+    [user.id, codeHash]
+  );
+  const record = rows[0];
+  if (!record || record.used_at || new Date(record.expires_at).getTime() < Date.now()) {
+    throw badRequest("Codice non valido o scaduto");
+  }
+
+  await pool.query("UPDATE users SET email_verified_at = now() WHERE id = $1", [user.id]);
+  await pool.query("UPDATE email_verification_codes SET used_at = now() WHERE id = $1", [record.id]);
+
+  const verifiedUser = await findUserById(user.id);
+  await issueSessionAndRespond(res, verifiedUser, req);
+  res.json({ user: toPublicUser(verifiedUser) });
+});
+
+export const resendVerification = asyncHandler(async (req, res) => {
+  const { email } = req.body;
+
+  const user = await findUserByEmail(email);
+  if (user && !user.email_verified_at) {
+    await issueAndSendOtp(user);
+  }
+
+  res.status(204).end();
 });
 
 export const refresh = asyncHandler(async (req, res) => {
@@ -111,22 +179,6 @@ export const me = asyncHandler(async (req, res) => {
   res.json({ user: toPublicUser(user) });
 });
 
-export const changePassword = asyncHandler(async (req, res) => {
-  const { newPassword } = req.body;
-
-  const user = await findUserById(req.user.id);
-  if (!user) throw unauthorized();
-
-  const passwordHash = await bcrypt.hash(newPassword, env.bcryptCost);
-  await updateUserPassword(user.id, passwordHash);
-
-  // Cambio password: si invalidano tutte le sessioni esistenti per sicurezza.
-  await revokeAllUserSessions(user.id);
-  clearAuthCookies(res);
-
-  res.status(204).end();
-});
-
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 ora
 
 export const forgotPassword = asyncHandler(async (req, res) => {
@@ -151,10 +203,20 @@ export const forgotPassword = asyncHandler(async (req, res) => {
       [user.id, tokenHash, expiresAt]
     );
 
+    const resetUrl = `${env.frontendOrigin}/reset-password?token=${rawToken}`;
+
+    // Stesso motivo del log OTP in issueAndSendOtp: il token è hashato nel DB.
+    if (!isProduction) console.log(`[dev] Link di reset password per ${email}: ${resetUrl}`);
+
     sendEmail({
       to: email,
       subject: "Reimposta la tua password - Hair Studio",
-      html: `<p>Usa questo codice per reimpostare la password (valido 1 ora): <b>${rawToken}</b></p>`,
+      html: renderEmailLayout({
+        title: "Reimposta la tua password",
+        bodyHtml: "<p>Hai richiesto di reimpostare la password. Il link è valido per 1 ora.</p>",
+        ctaText: "Reimposta password",
+        ctaUrl: resetUrl,
+      }),
     }).catch((err) => console.error("[auth] invio email reset password fallito", err));
   }
 

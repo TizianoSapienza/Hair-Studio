@@ -25,6 +25,10 @@ export default function Login() {
       const me = await login(email, password);
       window.location.href = me?.role === "admin" ? "/admin" : returnTo;
     } catch (err) {
+      if (err.details?.code === "EMAIL_NOT_VERIFIED") {
+        window.location.href = `/verify-email?email=${encodeURIComponent(email)}`;
+        return;
+      }
       setError(err.message || "Email o password non validi");
     } finally {
       setLoading(false);

@@ -46,12 +46,19 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (data) => {
-    const { user: newUser } = await authApi.register(data);
-    setUser(newUser);
+    // Nessuna sessione creata qui: l'account resta non verificato finché non si
+    // conferma il codice OTP inviato via email (vedi verifyEmail).
+    return authApi.register(data);
+  };
+
+  const verifyEmail = async (email, code) => {
+    const { user: verifiedUser } = await authApi.verifyEmail({ email, code });
+    setUser(verifiedUser);
     setIsAuthenticated(true);
     setAuthChecked(true);
     setAuthError(null);
-    return newUser;
+    if (verifiedUser?.id) registerPushToken(verifiedUser);
+    return verifiedUser;
   };
 
   const logout = async () => {
@@ -71,6 +78,7 @@ export const AuthProvider = ({ children }) => {
       authError,
       login,
       register,
+      verifyEmail,
       logout,
       checkUserAuth,
       refreshUser: checkUserAuth,

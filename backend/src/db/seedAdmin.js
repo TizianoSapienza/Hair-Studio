@@ -27,8 +27,8 @@ async function run() {
   const passwordHash = await bcrypt.hash(password, env.bcryptCost);
 
   await pool.query(
-    `INSERT INTO users (first_name, last_name, email, phone, password_hash, role)
-     VALUES ($1, $2, $3, $4, $5, 'admin')`,
+    `INSERT INTO users (first_name, last_name, email, phone, password_hash, role, email_verified_at)
+     VALUES ($1, $2, $3, $4, $5, 'admin', now())`,
     [firstName, lastName, email, phone, passwordHash]
   );
 

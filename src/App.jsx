@@ -33,6 +33,7 @@ const Login = lazy(() => import('@/pages/Login'));
 const Register = lazy(() => import('@/pages/Register'));
 const ForgotPassword = lazy(() => import('@/pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword'));
+const VerifyEmail = lazy(() => import('@/pages/VerifyEmail'));
 
 function RouteSkeleton() {
   return (
@@ -65,6 +66,7 @@ function App() {
             <Route path="/register" element={<Register />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/verify-email" element={<VerifyEmail />} />
             <Route element={<ProtectedRoute unauthenticatedElement={<Navigate to="/login" replace />} />}>
               <Route path="/prenota" element={<Booking />} />
               <Route path="/le-mie-prenotazioni" element={<MyBookings />} />

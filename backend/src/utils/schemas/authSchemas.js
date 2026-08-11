@@ -24,8 +24,13 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(72),
 });
 
-export const changePasswordSchema = z.object({
-  newPassword: passwordSchema,
+export const verifyEmailSchema = z.object({
+  email: z.string().trim().email().max(255),
+  code: z.string().trim().regex(/^\d{6}$/, "Codice non valido"),
+});
+
+export const resendVerificationSchema = z.object({
+  email: z.string().trim().email().max(255),
 });
 
 export const forgotPasswordSchema = z.object({

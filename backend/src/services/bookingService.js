@@ -4,6 +4,9 @@ import { createNotification, notifyAllAdmins, publishNotifications } from "./not
 import { publishAdminEvent } from "./realtimeService.js";
 import { getServiceById } from "./serviceService.js";
 import { getStaffById } from "./staffService.js";
+import { sendEmail } from "./emailService.js";
+import { renderEmailLayout } from "../utils/emailTemplate.js";
+import { escapeHtml } from "../utils/escapeHtml.js";
 import { badRequest, conflict, forbidden, notFound } from "../utils/AppError.js";
 
 const ACTIVE_STATUSES = ["in_attesa", "confermata"];
@@ -187,6 +190,14 @@ export async function confirmBooking(id) {
     },
   });
   publishAdminEvent({ type: "booking_updated", booking });
+  sendEmail({
+    to: booking.client_email,
+    subject: "Prenotazione confermata - Hair Studio",
+    html: renderEmailLayout({
+      title: "Prenotazione confermata",
+      bodyHtml: `<p>Ciao ${escapeHtml(booking.client_name)}, la tua prenotazione per <strong>${escapeHtml(booking.service_name)}</strong> il ${booking.booking_date} alle ${booking.start_time} è stata confermata.</p>`,
+    }),
+  }).catch((err) => console.error("[booking] invio email conferma fallito", err));
   return booking;
 }
 
@@ -212,6 +223,14 @@ export async function cancelBookingAdmin(id) {
     },
   });
   publishAdminEvent({ type: "booking_updated", booking });
+  sendEmail({
+    to: booking.client_email,
+    subject: "Prenotazione cancellata - Hair Studio",
+    html: renderEmailLayout({
+      title: "Prenotazione cancellata",
+      bodyHtml: `<p>Ciao ${escapeHtml(booking.client_name)}, la tua prenotazione per <strong>${escapeHtml(booking.service_name)}</strong> il ${booking.booking_date} alle ${booking.start_time} è stata cancellata.</p>`,
+    }),
+  }).catch((err) => console.error("[booking] invio email cancellazione fallito", err));
   return booking;
 }
 

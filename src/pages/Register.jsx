@@ -61,14 +61,14 @@ export default function Register() {
 
     setLoading(true);
     try {
-      await register({
+      const result = await register({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
         email,
         phone: fullPhone,
         password,
       });
-      window.location.href = returnTo;
+      window.location.href = `/verify-email?email=${encodeURIComponent(result.email)}`;
     } catch (err) {
       setError(err.message || "Registrazione fallita");
     } finally {
