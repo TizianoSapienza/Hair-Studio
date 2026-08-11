@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { staffApi } from "@/api/catalogApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,11 +9,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Pencil, Loader2, UserCircle2, ArrowLeft, GripVertical } from "lucide-react";
 import { Image } from "@/components/ui/image";
+import { ImageUploadField } from "@/components/admin/ImageUploadField";
 import AdminHeader from "@/components/layout/AdminHeader";
 import { toast } from "sonner";
 import { extractError } from "@/lib/apiError";
 
 export default function ManageStaff() {
+  const queryClient = useQueryClient();
   const [staff, setStaff] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(null);
@@ -52,6 +55,7 @@ export default function ManageStaff() {
         photoUrl: form.photoUrl || "",
         specialization: form.specialization || "",
       });
+      queryClient.invalidateQueries({ queryKey: ["site_data"] });
       toast.success("Operatore aggiornato");
       setOpen(false);
       await load();
@@ -141,10 +145,12 @@ export default function ManageStaff() {
               <Label htmlFor="name">Nome</Label>
               <Input id="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="photo">URL Foto</Label>
-              <Input id="photo" value={form.photoUrl} onChange={(e) => setForm({ ...form, photoUrl: e.target.value })} placeholder="https://..." />
-            </div>
+            <ImageUploadField
+              label="Foto"
+              value={form.photoUrl}
+              onChange={(url) => setForm({ ...form, photoUrl: url })}
+              folder="staff"
+            />
             <div className="space-y-2">
               <Label htmlFor="spec">Specializzazione</Label>
               <Input id="spec" value={form.specialization} onChange={(e) => setForm({ ...form, specialization: e.target.value })} placeholder="es. Taglio uomo, Barba" />

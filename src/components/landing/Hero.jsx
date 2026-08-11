@@ -22,7 +22,7 @@ export default function Hero() {
         transition={shouldReduceMotion ? { duration: 0 } : { duration: 1.6, ease: [0.22, 1, 0.36, 1] }}
       >
         <img
-          src="/img/hero.png"
+          src={content?.heroImageUrl || "/img/hero.png"}
           alt="Interno del salone"
           className="h-full w-full object-cover object-center"
         />

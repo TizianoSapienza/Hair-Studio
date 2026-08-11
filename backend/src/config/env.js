@@ -20,6 +20,12 @@ export const env = {
     refreshTtlDays: Number(process.env.JWT_REFRESH_TTL_DAYS || 30),
   },
   bcryptCost: Number(process.env.BCRYPT_COST || 12),
+  s3: {
+    bucket: required("S3_BUCKET"),
+    region: required("S3_REGION"),
+    accessKeyId: required("S3_ACCESS_KEY_ID"),
+    secretAccessKey: required("S3_SECRET_ACCESS_KEY"),
+  },
 };
 
 export const isProduction = env.nodeEnv === "production";

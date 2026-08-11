@@ -85,7 +85,7 @@ export async function getDayOverview(date, staffId, { includeDetails } = { inclu
   );
 
   const { rows: blockedRows } = await pool.query(
-    `SELECT id, staff_id, start_time, end_time, note
+    `SELECT id, staff_id, start_time, end_time, note, status
      FROM blocked_slots
      WHERE blocked_date = $1 AND staff_id = ANY($2::uuid[])
      ORDER BY start_time`,
@@ -147,7 +147,8 @@ export async function getDayOverview(date, staffId, { includeDetails } = { inclu
     })),
     ...blockedRows.map((b) => ({
       id: b.id,
-      status: "blocked",
+      status: b.status,
+      kind: "blocked",
       start_time: b.start_time,
       staff_id: b.staff_id,
       staff_name: staffNameById.get(b.staff_id) || "",

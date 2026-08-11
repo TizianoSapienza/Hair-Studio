@@ -5,6 +5,7 @@ import * as adminServiceController from "../controllers/adminServiceController.j
 import * as adminStaffController from "../controllers/adminStaffController.js";
 import * as adminScheduleController from "../controllers/adminScheduleController.js";
 import * as adminContentController from "../controllers/adminContentController.js";
+import * as adminUploadController from "../controllers/adminUploadController.js";
 import { adminEventsStream } from "../controllers/eventsController.js";
 import { requireAuth, requireRole } from "../middleware/auth.js";
 import { validateBody, validateQuery } from "../utils/validate.js";
@@ -28,6 +29,7 @@ import {
   updateOpeningHoursSchema,
 } from "../utils/schemas/scheduleAdminSchemas.js";
 import { businessInfoSchema, homepageContentSchema } from "../utils/schemas/contentSchemas.js";
+import { presignUploadSchema, listUploadsQuerySchema } from "../utils/schemas/uploadSchemas.js";
 
 const router = Router();
 
@@ -47,6 +49,8 @@ router.get("/stats", validateQuery(adminStatsQuerySchema), bookingController.adm
 router.get("/blocked-slots", validateQuery(blockedSlotsQuerySchema), blockedSlotController.listBlockedSlots);
 router.post("/blocked-slots", validateBody(createBlockedSlotSchema), blockedSlotController.createBlockedSlot);
 router.post("/blocked-slots/bulk", validateBody(createBlockedSlotsBulkSchema), blockedSlotController.createBlockedSlotsBulk);
+router.post("/blocked-slots/:id/complete", blockedSlotController.completeBlockedSlot);
+router.post("/blocked-slots/:id/no-show", blockedSlotController.noShowBlockedSlot);
 router.delete("/blocked-slots/:id", blockedSlotController.deleteBlockedSlot);
 
 router.get("/services", adminServiceController.listServices);
@@ -72,5 +76,8 @@ router.get("/homepage-content", adminContentController.getHomepageContent);
 router.patch("/homepage-content", validateBody(homepageContentSchema), adminContentController.updateHomepageContent);
 
 router.get("/clients", adminContentController.listClients);
+
+router.post("/uploads/presign", validateBody(presignUploadSchema), adminUploadController.presignUpload);
+router.get("/uploads", validateQuery(listUploadsQuerySchema), adminUploadController.listUploads);
 
 export default router;

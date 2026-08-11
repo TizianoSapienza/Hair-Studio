@@ -112,13 +112,10 @@ export const me = asyncHandler(async (req, res) => {
 });
 
 export const changePassword = asyncHandler(async (req, res) => {
-  const { currentPassword, newPassword } = req.body;
+  const { newPassword } = req.body;
 
   const user = await findUserById(req.user.id);
   if (!user) throw unauthorized();
-
-  const matches = await bcrypt.compare(currentPassword, user.password_hash);
-  if (!matches) throw badRequest("Password attuale non corretta");
 
   const passwordHash = await bcrypt.hash(newPassword, env.bcryptCost);
   await updateUserPassword(user.id, passwordHash);

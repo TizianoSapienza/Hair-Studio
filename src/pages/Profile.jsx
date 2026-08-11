@@ -26,8 +26,6 @@ export default function Profile() {
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [showCurrent, setShowCurrent] = useState(false);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showNew, setShowNew] = useState(false);
@@ -90,7 +88,7 @@ export default function Profile() {
     }
     setChangingPwd(true);
     try {
-      await authApi.changePassword({ currentPassword, newPassword });
+      await authApi.changePassword({ newPassword });
     } catch (err) {
       toast.error("Errore", { description: err.message });
       setChangingPwd(false);
@@ -179,17 +177,8 @@ export default function Profile() {
 
         <div className="mt-6 rounded-2xl border border-border bg-card p-6">
           <h2 className="flex items-center gap-2 font-heading text-lg font-semibold"><KeyRound className="h-5 w-5 text-primary" /> Sicurezza</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Inserisci la password attuale e la nuova per aggiornarla direttamente.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Inserisci la nuova password per aggiornarla direttamente.</p>
           <form onSubmit={handlePasswordChange} className="mt-4 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="current_password">Password attuale</Label>
-              <div className="relative">
-                <Input id="current_password" type={showCurrent ? "text" : "password"} autoComplete="current-password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="••••••••" required />
-                <button type="button" onClick={() => setShowCurrent((v) => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" aria-label="Mostra password">
-                  {showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="new_password">Nuova password</Label>

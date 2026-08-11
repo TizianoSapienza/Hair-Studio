@@ -134,76 +134,82 @@ export default function ManageSchedule() {
   return (
     <div className="flex min-h-screen flex-col bg-secondary/30">
       <AdminHeader />
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-10 sm:px-6">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
         <div className="mb-6">
           <Button asChild variant="ghost" size="sm" className="mb-2 -ml-2 hidden md:inline-flex"><Link to="/admin"><ArrowLeft className="mr-2 h-4 w-4" /> Dashboard</Link></Button>
           <h1 className="font-heading text-3xl font-semibold tracking-tight">Orari e chiusure</h1>
           <p className="mt-1 text-sm text-muted-foreground">Configura gli orari settimanali (usati per generare gli slot) e le chiusure straordinarie.</p>
         </div>
 
-        {loadingOh ? (
-          <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-        ) : (
-          <form onSubmit={handleSaveOh} className="space-y-5 rounded-2xl border border-border bg-card p-5 sm:p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="font-heading text-lg font-semibold">Orari settimanali</h2>
-              <div className="flex items-center gap-2">
-                <Label htmlFor="slot" className="text-xs text-muted-foreground">Slot (min)</Label>
-                <Input id="slot" type="number" min={15} step={15} value={slotMinutes} onChange={(e) => setSlotMinutes(e.target.value)} className="h-9 w-20" />
-              </div>
-            </div>
-            <div className="space-y-2">
-              {days.map((d, i) => (
-                <div key={d.dayOfWeek} className="flex flex-wrap items-center gap-3">
-                  <span className="w-28 shrink-0 text-sm font-medium">{DAY_LABELS_LONG[d.dayOfWeek]}</span>
-                  <label className="flex shrink-0 items-center gap-2 text-sm text-muted-foreground">
-                    <Checkbox checked={!!d.isOpen} onCheckedChange={(v) => updateDay(i, "isOpen", !!v)} />
-                    Aperto
-                  </label>
-                  <Input type="time" value={d.startTime} onChange={(e) => updateDay(i, "startTime", e.target.value)} disabled={!d.isOpen} className="h-9 w-28" />
-                  <span className="text-muted-foreground">–</span>
-                  <Input type="time" value={d.endTime} onChange={(e) => updateDay(i, "endTime", e.target.value)} disabled={!d.isOpen} className="h-9 w-28" />
-                </div>
-              ))}
-            </div>
-            <div className="flex justify-end">
-              <Button type="submit" disabled={savingOh}>
-                {savingOh ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvataggio...</> : <><Save className="mr-2 h-4 w-4" /> Salva orari</>}
-              </Button>
-            </div>
-          </form>
-        )}
-
-        <div className="mt-8 rounded-2xl border border-border bg-card p-5 sm:p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-heading text-lg font-semibold">Chiusure straordinarie</h2>
-            <Button size="sm" onClick={() => { setClosureForm(EMPTY_CLOSURE); setClosureOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Aggiungi</Button>
-          </div>
-          {loadingCl ? (
-            <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-          ) : closures.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-border p-8 text-center">
-              <CalendarOff className="mx-auto h-8 w-8 text-muted-foreground" />
-              <p className="mt-2 text-sm text-muted-foreground">Nessuna chiusura programmata.</p>
-            </div>
+        <div className="space-y-8 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0 lg:items-start">
+          {loadingOh ? (
+            <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
           ) : (
-            <ul className="space-y-2">
-              {closures.map((c) => (
-                <li key={c.id} className="flex items-center justify-between rounded-xl border border-border p-3">
-                  <div>
-                    <p className="font-medium">
-                      {formatDateIT(c.startDate)}{c.endDate && c.endDate !== c.startDate ? " → " + formatDateIT(c.endDate) : ""}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {c.closureType === "closed" ? "Chiusura totale" : `Orario modificato: ${c.openTime}–${c.closeTime}`}
-                      {c.note ? " · " + c.note : ""}
-                    </p>
+            <form onSubmit={handleSaveOh} className="space-y-5 rounded-2xl border border-border bg-card p-5 sm:p-6">
+              <div className="flex items-center justify-between">
+                <h2 className="font-heading text-lg font-semibold">Orari settimanali</h2>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="slot" className="text-xs text-muted-foreground">Slot (min)</Label>
+                  <Input id="slot" type="number" min={15} step={15} value={slotMinutes} onChange={(e) => setSlotMinutes(e.target.value)} className="h-9 w-20" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                {days.map((d, i) => (
+                  <div key={d.dayOfWeek} className="rounded-xl border border-border/60 p-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">{DAY_LABELS_LONG[d.dayOfWeek]}</span>
+                      <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Checkbox checked={!!d.isOpen} onCheckedChange={(v) => updateDay(i, "isOpen", !!v)} />
+                        Aperto
+                      </label>
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <Input type="time" value={d.startTime} onChange={(e) => updateDay(i, "startTime", e.target.value)} disabled={!d.isOpen} className="h-9 flex-1" />
+                      <span className="text-muted-foreground">–</span>
+                      <Input type="time" value={d.endTime} onChange={(e) => updateDay(i, "endTime", e.target.value)} disabled={!d.isOpen} className="h-9 flex-1" />
+                    </div>
                   </div>
-                  <Button size="icon" variant="ghost" onClick={() => setDeleteTarget(c)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
-                </li>
-              ))}
-            </ul>
+                ))}
+              </div>
+              <div className="flex justify-end">
+                <Button type="submit" disabled={savingOh}>
+                  {savingOh ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Salvataggio...</> : <><Save className="mr-2 h-4 w-4" /> Salva orari</>}
+                </Button>
+              </div>
+            </form>
           )}
+
+          <div className="rounded-2xl border border-border bg-card p-5 sm:p-6 lg:max-h-[70vh] lg:overflow-y-auto">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="font-heading text-lg font-semibold">Chiusure straordinarie</h2>
+              <Button size="sm" onClick={() => { setClosureForm(EMPTY_CLOSURE); setClosureOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Aggiungi</Button>
+            </div>
+            {loadingCl ? (
+              <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            ) : closures.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-border p-8 text-center">
+                <CalendarOff className="mx-auto h-8 w-8 text-muted-foreground" />
+                <p className="mt-2 text-sm text-muted-foreground">Nessuna chiusura programmata.</p>
+              </div>
+            ) : (
+              <ul className="space-y-2">
+                {closures.map((c) => (
+                  <li key={c.id} className="flex items-center justify-between rounded-xl border border-border p-3">
+                    <div>
+                      <p className="font-medium">
+                        {formatDateIT(c.startDate)}{c.endDate && c.endDate !== c.startDate ? " → " + formatDateIT(c.endDate) : ""}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {c.closureType === "closed" ? "Chiusura totale" : `Orario modificato: ${c.openTime}–${c.closeTime}`}
+                        {c.note ? " · " + c.note : ""}
+                      </p>
+                    </div>
+                    <Button size="icon" variant="ghost" onClick={() => setDeleteTarget(c)}><Trash2 className="h-4 w-4 text-destructive" /></Button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </div>
       </main>
 

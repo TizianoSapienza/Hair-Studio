@@ -15,6 +15,11 @@ const FIELDS = [
   "about_chi_siamo",
   "about_come_funziona",
   "about_team",
+  "hero_image_url",
+  "about_image_url",
+  "gallery1_image_url",
+  "gallery2_image_url",
+  "gallery3_image_url",
 ];
 
 export async function getHomepageContent() {

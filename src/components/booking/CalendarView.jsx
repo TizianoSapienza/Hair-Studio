@@ -42,7 +42,7 @@ function nowTimeStr() {
   return hh + ":" + mm;
 }
 //Stati che "occupano" fisicamente uno slot (vedi backend/src/services/scheduleService.js).
-const OCCUPYING_STATUSES = new Set(["in_attesa", "confermata", "blocked"]);
+const OCCUPYING_STATUSES = new Set(["in_attesa", "confermata"]);
 
 const STATUS_STYLE = {
   free: { dot: "bg-success", label: "Libero", chip: "bg-success-soft text-success-soft-foreground" },
@@ -60,8 +60,8 @@ const FILTERS = [
 
 function inFilter(time, f, from, to) {
   if (f === "all") return true;
-  if (f === "morning") return time < "12:00";
-  if (f === "afternoon") return time >= "12:00";
+  if (f === "morning") return time < "13:00";
+  if (f === "afternoon") return time >= "13:00";
   if (f === "custom") {
     if (from && time < from) return false;
     if (to && time > to) return false;
@@ -130,7 +130,10 @@ export default function CalendarView({
     const map = new Map();
     const slotMin = data?.slotMinutes || 30;
     for (const b of data?.bookings || []) {
-      if (!OCCUPYING_STATUSES.has(b.status)) continue;
+      //I blocchi manuali occupano lo slot indipendentemente dall'esito (completata/no_show):
+      //solo le prenotazioni vere smettono di "occupare" una volta risolte.
+      const occupies = b.kind === "blocked" ? true : OCCUPYING_STATUSES.has(b.status);
+      if (!occupies) continue;
       const start = timeToMinutes(b.startTime);
       const end = start + (b.slotsCount || 1) * slotMin;
       if (!map.has(b.staffId)) map.set(b.staffId, []);
@@ -191,6 +194,9 @@ export default function CalendarView({
     });
   };
 
+  //kind: "confirm" | "complete" | "no_show" | "delete" — applicata alla selezione mista di
+  //prenotazioni e blocchi manuali; per ogni elemento si esegue solo se la transizione è
+  //valida per il suo stato corrente, altrimenti viene saltato silenziosamente.
   const bulkAction = async (kind) => {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
@@ -199,10 +205,16 @@ export default function CalendarView({
       for (const id of ids) {
         const b = (data.bookings || []).find((x) => x.id === id);
         if (!b) continue;
-        if (kind === "complete" && b.status !== "confermata") continue;
-        if (kind === "cancel" && !["in_attesa", "confermata"].includes(b.status)) continue;
-        if (kind === "complete") await bookingsApi.adminComplete(id);
-        else await bookingsApi.adminCancel(id);
+        if (b.kind === "blocked") {
+          if (kind === "delete") await blockedSlotsApi.adminDelete(id);
+          else if (kind === "complete" && b.status === "blocked") await blockedSlotsApi.adminComplete(id);
+          else if (kind === "no_show" && b.status === "blocked") await blockedSlotsApi.adminNoShow(id);
+          continue;
+        }
+        if (kind === "confirm" && b.status === "in_attesa") await bookingsApi.adminConfirm(id);
+        else if (kind === "complete" && b.status === "confermata") await bookingsApi.adminComplete(id);
+        else if (kind === "no_show" && b.status === "confermata") await bookingsApi.adminNoShow(id);
+        else if (kind === "delete" && ["in_attesa", "confermata"].includes(b.status)) await bookingsApi.adminCancel(id);
       }
       await reload();
     } catch (err) {
@@ -222,7 +234,9 @@ export default function CalendarView({
     [bookings, queryStaff]
   );
   const slotBookings = useMemo(
-    () => (slotModal ? visibleBookings.filter((b) => b.startTime === slotModal) : []),
+    // b.startTime arriva da Postgres come "HH:MM:SS", slotModal come "HH:MM" (minutesToTime):
+    // confronto sui minuti invece che sulla stringa grezza per evitare il mismatch di formato.
+    () => (slotModal ? visibleBookings.filter((b) => timeToMinutes(b.startTime) === timeToMinutes(slotModal)) : []),
     [slotModal, visibleBookings]
   );
   const todayMidnight = new Date();
@@ -242,11 +256,12 @@ export default function CalendarView({
   };
 
   const renderItem = (b, closeModal) => {
-    const isBlock = b.status === "blocked";
-    const pending = b.status === "in_attesa";
-    const confirmed = b.status === "confermata";
+    const isBlock = b.kind === "blocked";
+    const blockActive = isBlock && b.status === "blocked";
+    const pending = !isBlock && b.status === "in_attesa";
+    const confirmed = !isBlock && b.status === "confermata";
     const completed = b.status === "completata";
-    const cancelled = b.status === "cancellata";
+    const cancelled = !isBlock && b.status === "cancellata";
     const noShow = b.status === "no_show";
     const opts = { closeModal };
     const onComplete = () => runAction("complete-" + b.id, () => bookingsApi.adminComplete(b.id), opts);
@@ -254,10 +269,12 @@ export default function CalendarView({
     const onRemoveBlock = () => runAction("cancel-" + b.id, () => blockedSlotsApi.adminDelete(b.id), opts);
     const onNoShow = () => runAction("noshow-" + b.id, () => bookingsApi.adminNoShow(b.id), opts);
     const onConfirm = () => runAction("confirm-" + b.id, () => bookingsApi.adminConfirm(b.id), opts);
+    const onBlockComplete = () => runAction("block-complete-" + b.id, () => blockedSlotsApi.adminComplete(b.id), opts);
+    const onBlockNoShow = () => runAction("block-noshow-" + b.id, () => blockedSlotsApi.adminNoShow(b.id), opts);
     return (
       <li key={b.id} className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3 ${noShow ? "border-destructive/40 bg-destructive-soft" : "border-border bg-secondary/40"} ${completed || cancelled ? "opacity-60" : ""}`}>
         <div className="flex min-w-0 items-start gap-3">
-          {(pending || confirmed) && (
+          {(pending || confirmed || blockActive) && (
             <Checkbox checked={selected.has(b.id)} onCheckedChange={() => toggleSelect(b.id)} className="mt-1" />
           )}
           <div className="min-w-0">
@@ -273,7 +290,7 @@ export default function CalendarView({
             )}
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2">
           {pending && (
             <span className="status-badge-in inline-flex items-center rounded-full bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning-soft-foreground">
               <Clock className="mr-1 h-3.5 w-3.5" /> In attesa
@@ -299,33 +316,47 @@ export default function CalendarView({
               <UserX className="mr-1 h-3.5 w-3.5" /> No-show
             </span>
           )}
-          {pending && (
-            <>
-              <Button size="sm" onClick={onConfirm} disabled={readOnly || actionLoading === "confirm-" + b.id}>
-                {actionLoading === "confirm-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-1 h-4 w-4" /> Conferma</>}
-              </Button>
-              <Button size="sm" variant="outline" onClick={onCancel} disabled={readOnly || actionLoading === "cancel-" + b.id}>
-                {actionLoading === "cancel-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Ban className="mr-1 h-4 w-4" /> Cancella</>}
-              </Button>
-            </>
-          )}
-          {confirmed && (
-            <>
-              <Button size="sm" onClick={onComplete} disabled={readOnly || actionLoading === "complete-" + b.id}>
-                {actionLoading === "complete-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-1 h-4 w-4" /> Completa</>}
-              </Button>
-              <Button size="sm" variant="outline" onClick={onNoShow} disabled={readOnly || actionLoading === "noshow-" + b.id}>
-                {actionLoading === "noshow-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><UserX className="mr-1 h-4 w-4" /> No-show</>}
-              </Button>
-              <Button size="sm" variant="outline" onClick={onCancel} disabled={readOnly || actionLoading === "cancel-" + b.id}>
-                {actionLoading === "cancel-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Ban className="mr-1 h-4 w-4" /> Cancella</>}
-              </Button>
-            </>
-          )}
-          {isBlock && (
-            <Button size="sm" variant="outline" onClick={onRemoveBlock} disabled={readOnly || actionLoading === "cancel-" + b.id}>
-              {actionLoading === "cancel-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Trash2 className="mr-1 h-4 w-4" /> Rimuovi</>}
-            </Button>
+          {(pending || confirmed || blockActive || isBlock) && (
+            <div className="grid w-full grid-cols-2 gap-2">
+              {pending && (
+                <>
+                  <Button size="sm" className="w-full" onClick={onConfirm} disabled={readOnly || actionLoading === "confirm-" + b.id}>
+                    {actionLoading === "confirm-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-1 h-4 w-4" /> Conferma</>}
+                  </Button>
+                  <Button size="sm" variant="outline" className="w-full" onClick={onCancel} disabled={readOnly || actionLoading === "cancel-" + b.id}>
+                    {actionLoading === "cancel-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Ban className="mr-1 h-4 w-4" /> Cancella</>}
+                  </Button>
+                </>
+              )}
+              {confirmed && (
+                <>
+                  <Button size="sm" className="w-full" onClick={onComplete} disabled={readOnly || actionLoading === "complete-" + b.id}>
+                    {actionLoading === "complete-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-1 h-4 w-4" /> Completa</>}
+                  </Button>
+                  <Button size="sm" variant="outline" className="w-full" onClick={onNoShow} disabled={readOnly || actionLoading === "noshow-" + b.id}>
+                    {actionLoading === "noshow-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><UserX className="mr-1 h-4 w-4" /> No-show</>}
+                  </Button>
+                  <Button size="sm" variant="outline" className="col-span-2 w-full" onClick={onCancel} disabled={readOnly || actionLoading === "cancel-" + b.id}>
+                    {actionLoading === "cancel-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Ban className="mr-1 h-4 w-4" /> Cancella</>}
+                  </Button>
+                </>
+              )}
+              {blockActive && (
+                <>
+                  <Button size="sm" className="w-full" onClick={onBlockComplete} disabled={readOnly || actionLoading === "block-complete-" + b.id}>
+                    {actionLoading === "block-complete-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-1 h-4 w-4" /> Completa</>}
+                  </Button>
+                  <Button size="sm" variant="outline" className="w-full" onClick={onBlockNoShow} disabled={readOnly || actionLoading === "block-noshow-" + b.id}>
+                    {actionLoading === "block-noshow-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><UserX className="mr-1 h-4 w-4" /> No-show</>}
+                  </Button>
+                </>
+              )}
+              {isBlock && (
+                <Button size="sm" variant="outline" className={`w-full ${blockActive ? "col-span-2" : ""}`} onClick={onRemoveBlock} disabled={readOnly || actionLoading === "cancel-" + b.id}>
+                  {actionLoading === "cancel-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Trash2 className="mr-1 h-4 w-4" /> Rimuovi</>}
+                </Button>
+              )}
+            </div>
           )}
         </div>
       </li>
@@ -495,27 +526,7 @@ export default function CalendarView({
               <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-warning" /> In parte</span>
               <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-destructive" /> Occupato</span>
             </div>
-           </div>
-
-            {mode === "admin" && (
-              <div className="mt-6 border-t border-border pt-5 lg:mt-5 lg:max-h-[70vh] lg:overflow-y-auto lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <h4 className="font-heading text-sm font-semibold">Prenotazioni del giorno ({visibleBookings.length}){queryStaff !== "any" ? ` · ${(data?.operators || []).find((o) => o.id === queryStaff)?.name || "operatore"}` : ""}</h4>
-                  {selected.size > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="default" onClick={() => bulkAction("complete")} disabled={!!actionLoading}><Check className="mr-1 h-4 w-4" /> Completa ({selected.size})</Button>
-                      <Button size="sm" variant="outline" onClick={() => bulkAction("cancel")} disabled={!!actionLoading}><Ban className="mr-1 h-4 w-4" /> Cancella ({selected.size})</Button>
-                    </div>
-                  )}
-                </div>
-
-                {visibleBookings.length === 0 ? (
-                  <p className="mt-2 text-sm text-muted-foreground">Nessuna prenotazione.</p>
-                ) : (
-                  <ul className="mt-3 space-y-2">{visibleBookings.map((b) => renderItem(b, false))}</ul>
-                )}
-
-                {!readOnly && blockableSlots.length > 0 && (
+            {!readOnly && blockableSlots.length > 0 && (
                   <div className="mt-4">
                     <div className="flex items-center justify-between">
                       <p className="text-xs text-muted-foreground">Seleziona gli slot da bloccare:</p>
@@ -538,6 +549,27 @@ export default function CalendarView({
                       })}
                     </div>
                   </div>
+                )}
+           </div>
+
+            {mode === "admin" && (
+              <div className="mt-6 border-t border-border pt-5 lg:mt-5 lg:max-h-[70vh] lg:overflow-y-auto lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h4 className="font-heading text-sm font-semibold">Prenotazioni del giorno ({visibleBookings.length}){queryStaff !== "any" ? ` · ${(data?.operators || []).find((o) => o.id === queryStaff)?.name || "operatore"}` : ""}</h4>
+                  {selected.size > 0 && (
+                    <div className="flex flex-wrap gap-2">
+                      <Button size="sm" variant="outline" onClick={() => bulkAction("confirm")} disabled={!!actionLoading}><CheckCircle2 className="mr-1 h-4 w-4" /> Conferma ({selected.size})</Button>
+                      <Button size="sm" variant="default" onClick={() => bulkAction("complete")} disabled={!!actionLoading}><Check className="mr-1 h-4 w-4" /> Completa ({selected.size})</Button>
+                      <Button size="sm" variant="outline" onClick={() => bulkAction("no_show")} disabled={!!actionLoading}><UserX className="mr-1 h-4 w-4" /> No-show ({selected.size})</Button>
+                      <Button size="sm" variant="outline" onClick={() => bulkAction("delete")} disabled={!!actionLoading}><Trash2 className="mr-1 h-4 w-4" /> Elimina ({selected.size})</Button>
+                    </div>
+                  )}
+                </div>
+
+                {visibleBookings.length === 0 ? (
+                  <p className="mt-2 text-sm text-muted-foreground">Nessuna prenotazione.</p>
+                ) : (
+                  <ul className="mt-3 space-y-2">{visibleBookings.map((b) => renderItem(b, false))}</ul>
                 )}
               </div>
             )}

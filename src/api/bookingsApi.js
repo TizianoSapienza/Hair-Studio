@@ -19,5 +19,7 @@ export const blockedSlotsApi = {
   adminList: (params) => api.get("/admin/blocked-slots", params),
   adminCreate: (data) => api.post("/admin/blocked-slots", data),
   adminCreateBulk: (data) => api.post("/admin/blocked-slots/bulk", data),
+  adminComplete: (id) => api.post(`/admin/blocked-slots/${id}/complete`),
+  adminNoShow: (id) => api.post(`/admin/blocked-slots/${id}/no-show`),
   adminDelete: (id) => api.delete(`/admin/blocked-slots/${id}`),
 };

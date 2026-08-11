@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import AdminHeader from "@/components/layout/AdminHeader";
 import { toast } from "sonner";
+import { ImageUploadField } from "@/components/admin/ImageUploadField";
 
 const URL_FIELDS = [
   ["instagramUrl", "Instagram"],
@@ -48,6 +49,7 @@ const EMPTY = {
   whatsappUrl: "",
   googleMapsUrl: "",
   googleReviewUrl: "",
+  logoUrl: "",
   openingHoursDisplay: DEFAULT_ORARI,
 };
 
@@ -74,6 +76,7 @@ export default function AdminSettings() {
             whatsappUrl: rec.whatsappUrl || "",
             googleMapsUrl: rec.googleMapsUrl || "",
             googleReviewUrl: rec.googleReviewUrl || "",
+            logoUrl: rec.logoUrl || "",
             openingHoursDisplay: rec.openingHoursDisplay?.length ? rec.openingHoursDisplay : DEFAULT_ORARI,
           };
           setForm(loaded);
@@ -124,7 +127,7 @@ export default function AdminSettings() {
     setSaving(true);
     try {
       await businessInfoApi.adminUpdate(form);
-      queryClient.invalidateQueries({ queryKey: ["business_info"] });
+      queryClient.invalidateQueries({ queryKey: ["site_data"] });
       setSavedForm(form);
       toast.success("Impostazioni salvate");
     } catch (err) {
@@ -140,7 +143,7 @@ export default function AdminSettings() {
   return (
     <div className="flex min-h-screen flex-col bg-secondary/30">
       <AdminHeader />
-      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-10 sm:px-6">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
         <div className="mb-6">
           <Button asChild variant="ghost" size="sm" className="mb-2 -ml-2 hidden md:inline-flex"><Link to="/admin"><ArrowLeft className="mr-2 h-4 w-4" /> Dashboard</Link></Button>
           <h1 className="font-heading text-3xl font-semibold tracking-tight">Impostazioni attività</h1>
@@ -150,49 +153,74 @@ export default function AdminSettings() {
         {loading ? (
           <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-6 rounded-2xl border border-border bg-card p-5 sm:p-6">
-            <div className="space-y-2">
-              <Label htmlFor="nome">Nome attività</Label>
-              <Input id="nome" value={form.businessName} onChange={(e) => setForm({ ...form, businessName: e.target.value })} required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="indirizzo">Indirizzo</Label>
-              <Input id="indirizzo" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} required />
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="telefono">Telefono</Label>
-                <Input id="telefono" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0 lg:items-start">
+              <div className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+                <div>
+                  <h2 className="font-heading text-lg font-semibold">Dati attività</h2>
+                  <span className="mt-1.5 block h-0.5 w-10 rounded-full bg-primary" />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="nome">Nome attività</Label>
+                  <Input id="nome" value={form.businessName} onChange={(e) => setForm({ ...form, businessName: e.target.value })} required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="indirizzo">Indirizzo</Label>
+                  <Input id="indirizzo" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} required />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="telefono">Telefono</Label>
+                    <Input id="telefono" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email (opzionale)</Label>
+                    <Input id="email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+                  </div>
+                </div>
+                <ImageUploadField
+                  label="Logo"
+                  value={form.logoUrl}
+                  onChange={(url) => setForm({ ...form, logoUrl: url })}
+                  folder="branding"
+                />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="email">Email (opzionale)</Label>
-                <Input id="email" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+
+              <div className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+                <div>
+                  <h2 className="font-heading text-lg font-semibold">Link social ed esterni</h2>
+                  <span className="mt-1.5 block h-0.5 w-10 rounded-full bg-primary" />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="instagram">Instagram (URL)</Label>
+                    <Input id="instagram" value={form.instagramUrl} onChange={(e) => setForm({ ...form, instagramUrl: e.target.value })} placeholder="https://www.instagram.com/..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="facebook">Facebook (URL)</Label>
+                    <Input id="facebook" value={form.facebookUrl} onChange={(e) => setForm({ ...form, facebookUrl: e.target.value })} placeholder="https://www.facebook.com/..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="whatsapp">WhatsApp (URL)</Label>
+                    <Input id="whatsapp" value={form.whatsappUrl} onChange={(e) => setForm({ ...form, whatsappUrl: e.target.value })} placeholder="https://wa.me/..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gmaps">Google Maps (URL)</Label>
+                    <Input id="gmaps" value={form.googleMapsUrl} onChange={(e) => setForm({ ...form, googleMapsUrl: e.target.value })} placeholder="https://maps.google.com/..." />
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label htmlFor="greview">Google — link recensione (URL)</Label>
+                    <Input id="greview" value={form.googleReviewUrl} onChange={(e) => setForm({ ...form, googleReviewUrl: e.target.value })} placeholder="https://g.page/.../review" />
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="instagram">Instagram (URL)</Label>
-              <Input id="instagram" value={form.instagramUrl} onChange={(e) => setForm({ ...form, instagramUrl: e.target.value })} placeholder="https://www.instagram.com/..." />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="facebook">Facebook (URL)</Label>
-              <Input id="facebook" value={form.facebookUrl} onChange={(e) => setForm({ ...form, facebookUrl: e.target.value })} placeholder="https://www.facebook.com/..." />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="whatsapp">WhatsApp (URL)</Label>
-              <Input id="whatsapp" value={form.whatsappUrl} onChange={(e) => setForm({ ...form, whatsappUrl: e.target.value })} placeholder="https://wa.me/..." />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="gmaps">Google Maps — scheda attività (URL)</Label>
-              <Input id="gmaps" value={form.googleMapsUrl} onChange={(e) => setForm({ ...form, googleMapsUrl: e.target.value })} placeholder="https://maps.google.com/..." />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="greview">Google — link recensione (URL)</Label>
-              <Input id="greview" value={form.googleReviewUrl} onChange={(e) => setForm({ ...form, googleReviewUrl: e.target.value })} placeholder="https://g.page/.../review" />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Orari di apertura</Label>
+            <div className="space-y-4 rounded-2xl border border-border bg-card p-5 sm:p-6">
+              <div>
+                <h2 className="font-heading text-lg font-semibold">Orari di apertura</h2>
+                <span className="mt-1.5 block h-0.5 w-10 rounded-full bg-primary" />
+              </div>
               <div className="space-y-2 rounded-xl border border-border p-3">
                 {form.openingHoursDisplay.map((row, i) => (
                   <div key={i} className="flex items-center gap-3">

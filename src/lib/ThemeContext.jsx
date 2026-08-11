@@ -23,8 +23,18 @@ export function ThemeProvider({ children }) {
   }, [theme]);
 
   const toggle = useCallback(() => {
-    setTheme((t) => (t === "dark" ? "light" : "dark"));
-  }, []);
+    const next = theme === "dark" ? "light" : "dark";
+    const apply = () => {
+      document.documentElement.classList.toggle("dark", next === "dark");
+      setTheme(next);
+    };
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (document.startViewTransition && !reduceMotion) {
+      document.startViewTransition(apply);
+    } else {
+      apply();
+    }
+  }, [theme]);
 
   return (
     <ThemeContext.Provider value={{ theme, toggle }}>

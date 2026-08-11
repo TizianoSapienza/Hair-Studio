@@ -2,16 +2,16 @@
 //(business_info non ha ancora un campo logo dedicato): Logo.jsx mostra un fallback locale.
 export const SALON = {
   name: "Hair Studio",
-  tagline: "Il tuo barbershop di fiducia a Mascalucia",
-  address: "Corso S. Vito, 186, 95030 Mascalucia (CT)",
-  phone: "+39 376 205 3632",
+  tagline: "Il tuo barbershop di fiducia",
+  address: "Via Ignota, 90000 Comune (ZZ)",
+  phone: "+39 340 000 0000",
   email: "info@hairstudio.it",
   logo_url: "",
-  instagram: "https://www.instagram.com/hairstudio_mascalucia/",
-  facebook: "https://www.facebook.com/p/Hair-Studio-61552748425916/?locale=it_IT",
-  mapsUrl: "https://www.google.com/maps/search/?api=1&query=Corso+S.+Vito+186+Mascalucia+CT",
+  instagram: "https://www.instagram.com",
+  facebook: "https://www.facebook.com",
+  mapsUrl: "https://google.com",
   mapsEmbed:
-    "https://www.google.com/maps?q=Corso%20S.%20Vito%20186%20Mascalucia%20CT&output=embed",
+    "https://www.google.com/maps",
 };
 
 export const DAY_LABELS_LONG = [

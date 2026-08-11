@@ -1,6 +1,7 @@
 import React from "react";
 import { Image } from "@/components/ui/image";
 import Reveal from "./Reveal";
+import useHomepageContent from "@/hooks/useHomepageContent";
 
 const PHOTOS = [
   "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1200&q=80",
@@ -9,6 +10,12 @@ const PHOTOS = [
 ];
 
 export default function GallerySection() {
+  const { data: content } = useHomepageContent();
+  const photos = [
+    content?.gallery1ImageUrl || PHOTOS[0],
+    content?.gallery2ImageUrl || PHOTOS[1],
+    content?.gallery3ImageUrl || PHOTOS[2],
+  ];
   return (
     <section id="galleria" className="mx-auto max-w-6xl px-4 py-20 sm:px-6">
       <Reveal>
@@ -19,7 +26,7 @@ export default function GallerySection() {
         </div>
       </Reveal>
       <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        {PHOTOS.map((src, i) => (
+        {photos.map((src, i) => (
           <Reveal key={src} delay={i * 0.1}>
             <div className="overflow-hidden rounded-2xl">
               <Image

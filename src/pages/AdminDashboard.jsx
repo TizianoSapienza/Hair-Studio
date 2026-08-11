@@ -57,14 +57,14 @@ export default function AdminDashboard() {
 
   const STATS = [
     { label: "Oggi", value: stats.today, icon: CalendarDays, color: "text-primary", bg: "bg-primary/10" },
-    { label: "Completati (mese sel.)", value: stats.completedMonth, icon: CheckCircle2, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { label: "No-show (mese sel.)", value: stats.noShowMonth, icon: Ban, color: "text-red-600", bg: "bg-red-50" },
+    { label: "Completati (mese sel.)", value: stats.completedMonth, icon: CheckCircle2, color: "text-success", bg: "bg-success-soft" },
+    { label: "No-show (mese sel.)", value: stats.noShowMonth, icon: Ban, color: "text-destructive", bg: "bg-destructive-soft" },
   ];
 
   return (
     <div className="flex min-h-screen flex-col bg-secondary/30">
       <AdminHeader />
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10 sm:px-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-10 sm:px-6">
         <div className="mb-6 space-y-4">
           <div>
             <p className="inline-flex items-center gap-1.5 text-sm font-semibold uppercase tracking-wider text-primary">
@@ -72,14 +72,23 @@ export default function AdminDashboard() {
             </p>
             <h1 className="mt-1 font-heading text-3xl font-semibold tracking-tight">Gestione salone</h1>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline" size="sm"><Link to="/admin/staff"><UserCircle2 className="mr-2 h-4 w-4" /> Staff</Link></Button>
-            <Button asChild variant="outline" size="sm"><Link to="/admin/orari"><CalendarClock className="mr-2 h-4 w-4" /> Orari</Link></Button>
-            <Button asChild variant="outline" size="sm"><Link to="/admin/servizi"><Scissors className="mr-2 h-4 w-4" /> Servizi</Link></Button>
-            <Button asChild variant="outline" size="sm"><Link to="/admin/clienti"><Users className="mr-2 h-4 w-4" /> Clienti</Link></Button>
-            <Button asChild variant="outline" size="sm"><Link to="/admin/statistiche"><TrendingUp className="mr-2 h-4 w-4" /> Statistiche</Link></Button>
-            <Button asChild variant="outline" size="sm"><Link to="/admin/impostazioni"><Settings className="mr-2 h-4 w-4" /> Impostazioni</Link></Button>
-            <Button asChild variant="outline" size="sm"><Link to="/admin/contenuti"><FileText className="mr-2 h-4 w-4" /> Contenuti</Link></Button>
+          <div className="flex flex-wrap items-start gap-x-5 gap-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="w-full text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:w-auto sm:mr-1">Operatività</span>
+              <Button asChild variant="outline" size="sm"><Link to="/admin/staff"><UserCircle2 className="mr-2 h-4 w-4" /> Staff</Link></Button>
+              <Button asChild variant="outline" size="sm"><Link to="/admin/orari"><CalendarClock className="mr-2 h-4 w-4" /> Orari</Link></Button>
+              <Button asChild variant="outline" size="sm"><Link to="/admin/servizi"><Scissors className="mr-2 h-4 w-4" /> Servizi</Link></Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="w-full text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:w-auto sm:mr-1">Business</span>
+              <Button asChild variant="outline" size="sm"><Link to="/admin/clienti"><Users className="mr-2 h-4 w-4" /> Clienti</Link></Button>
+              <Button asChild variant="outline" size="sm"><Link to="/admin/statistiche"><TrendingUp className="mr-2 h-4 w-4" /> Statistiche</Link></Button>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="w-full text-[11px] font-semibold uppercase tracking-wider text-muted-foreground sm:w-auto sm:mr-1">Configurazione</span>
+              <Button asChild variant="outline" size="sm"><Link to="/admin/impostazioni"><Settings className="mr-2 h-4 w-4" /> Impostazioni</Link></Button>
+              <Button asChild variant="outline" size="sm"><Link to="/admin/contenuti"><FileText className="mr-2 h-4 w-4" /> Contenuti</Link></Button>
+            </div>
           </div>
         </div>
 

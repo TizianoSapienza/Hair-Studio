@@ -127,3 +127,27 @@ export async function deleteBlockedSlot(id) {
   if (!rows[0]) throw notFound("Blocco non trovato");
   publishAdminEvent({ type: "blocked_slot_deleted", blockedSlotId: id });
 }
+
+//Un blocco manuale può rappresentare un cliente arrivato per telefono/di persona (non
+//tramite l'app): completata/no_show permettono allo staff di registrarne l'esito come
+//per una prenotazione normale. FOR UPDATE evita una doppia transizione concorrente.
+async function transitionBlockedSlot(id, to) {
+  const blockedSlot = await withTransaction(async (client) => {
+    const { rows } = await client.query("SELECT * FROM blocked_slots WHERE id = $1 FOR UPDATE", [id]);
+    const current = rows[0];
+    if (!current) throw notFound("Blocco non trovato");
+    if (current.status !== "blocked") {
+      throw conflict(`Impossibile passare dallo stato "${current.status}" a "${to}"`);
+    }
+    const { rows: updatedRows } = await client.query(
+      `UPDATE blocked_slots SET status = $2, updated_at = now() WHERE id = $1 RETURNING *`,
+      [id, to]
+    );
+    return updatedRows[0];
+  });
+  publishAdminEvent({ type: "blocked_slot_updated", blockedSlot });
+  return blockedSlot;
+}
+
+export const completeBlockedSlot = (id) => transitionBlockedSlot(id, "completata");
+export const markBlockedSlotNoShow = (id) => transitionBlockedSlot(id, "no_show");

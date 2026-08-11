@@ -26,3 +26,11 @@ export const deleteBlockedSlot = asyncHandler(async (req, res) => {
   await blockedSlotService.deleteBlockedSlot(req.params.id);
   res.status(204).end();
 });
+
+export const completeBlockedSlot = asyncHandler(async (req, res) => {
+  res.json({ blockedSlot: await blockedSlotService.completeBlockedSlot(req.params.id) });
+});
+
+export const noShowBlockedSlot = asyncHandler(async (req, res) => {
+  res.json({ blockedSlot: await blockedSlotService.markBlockedSlotNoShow(req.params.id) });
+});

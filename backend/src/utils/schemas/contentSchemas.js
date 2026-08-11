@@ -26,6 +26,7 @@ export const businessInfoSchema = z.object({
   whatsappUrl: optionalUrl,
   googleMapsUrl: optionalUrl,
   googleReviewUrl: optionalUrl,
+  logoUrl: optionalUrl,
   openingHoursDisplay: z
     .array(
       z.object({
@@ -57,4 +58,9 @@ export const homepageContentSchema = z.object({
   aboutChiSiamo: longText,
   aboutComeFunziona: longText,
   aboutTeam: longText,
+  heroImageUrl: optionalUrl,
+  aboutImageUrl: optionalUrl,
+  gallery1ImageUrl: optionalUrl,
+  gallery2ImageUrl: optionalUrl,
+  gallery3ImageUrl: optionalUrl,
 });
