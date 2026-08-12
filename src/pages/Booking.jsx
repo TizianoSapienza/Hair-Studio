@@ -201,6 +201,7 @@ export default function Booking() {
                 selectedSlot={selectedSlot}
                 onSlotSelect={handleSlotSelect}
                 staffId={selectedStaff}
+                durationMinutes={selectedService?.durationMinutes}
               />
             </div>
 

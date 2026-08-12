@@ -10,6 +10,7 @@ export const calendarQuerySchema = z.object({
     .union([z.literal("any"), uuid])
     .optional()
     .transform((v) => (v === "any" ? undefined : v)),
+  duration_minutes: z.coerce.number().int().positive().optional(),
 });
 
 export const dateRangeQuerySchema = z.object({

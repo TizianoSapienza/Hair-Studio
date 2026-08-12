@@ -1,5 +1,5 @@
 import React from "react";
-import { MapPin, Phone, Instagram, Facebook } from "lucide-react";
+import { MapPin, Instagram, Facebook } from "lucide-react";
 import { Link } from "react-router-dom";
 import { SALON } from "@/lib/salonConfig";
 import { safeHref } from "@/lib/safeUrl";

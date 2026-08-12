@@ -24,8 +24,8 @@ export const cancelMyBooking = asyncHandler(async (req, res) => {
 // --- Admin ---
 
 export const getAdminCalendar = asyncHandler(async (req, res) => {
-  const { date, staff_id: staffId } = req.query;
-  const calendar = await getDayOverview(date, staffId, { includeDetails: true });
+  const { date, staff_id: staffId, duration_minutes: durationMinutes } = req.query;
+  const calendar = await getDayOverview(date, staffId, { includeDetails: true, durationMinutes });
   res.json(calendar);
 });
 

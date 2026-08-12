@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Home, LayoutDashboard, LogOut, UserCircle, Settings, ArrowLeft } from "lucide-react";
+import { Home, LayoutDashboard, LogOut, UserCircle, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/lib/AuthContext";
 import Logo from "@/components/Logo";
 import ThemeToggle from "@/components/ThemeToggle";

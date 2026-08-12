@@ -88,7 +88,8 @@ export default function CalendarView({
   onSlotSelect,
   selectedSlot,
   onAfterAction,
-  staffId = "any"
+  staffId = "any",
+  durationMinutes
 }) {
   const [actionLoading, setActionLoading] = useState(null);
   const [timeFilter, setTimeFilter] = useState("all");
@@ -108,9 +109,9 @@ export default function CalendarView({
 
   const dateStr = toDateString(date);
   const queryStaff = mode === "admin" ? staffFilter : staffId;
-  const { data, loading, load } = useCalendarData({ mode, dateStr, staffId: queryStaff, refreshKey });
+  const { data, loading, load } = useCalendarData({ mode, dateStr, staffId: queryStaff, refreshKey, durationMinutes });
 
-  useEffect(() => { setSelected(new Set()); setBlockSelection(new Set()); }, [dateStr, refreshKey]);
+  useEffect(() => { setSelected(new Set()); setBlockSelection(new Set()); }, [dateStr, refreshKey, queryStaff]);
   useEffect(() => { setPickerMonth(date); }, [date]);
 
   useEffect(() => {
@@ -201,22 +202,29 @@ export default function CalendarView({
     const ids = Array.from(selected);
     if (ids.length === 0) return;
     setActionLoading("bulk-" + kind);
-    try {
-      for (const id of ids) {
-        const b = (data.bookings || []).find((x) => x.id === id);
-        if (!b) continue;
+    const tasks = ids
+      .map((id) => (data.bookings || []).find((x) => x.id === id))
+      .filter(Boolean)
+      .map((b) => {
         if (b.kind === "blocked") {
-          if (kind === "delete") await blockedSlotsApi.adminDelete(id);
-          else if (kind === "complete" && b.status === "blocked") await blockedSlotsApi.adminComplete(id);
-          else if (kind === "no_show" && b.status === "blocked") await blockedSlotsApi.adminNoShow(id);
-          continue;
+          if (kind === "delete") return blockedSlotsApi.adminDelete(b.id);
+          if (kind === "complete" && b.status === "blocked") return blockedSlotsApi.adminComplete(b.id);
+          if (kind === "no_show" && b.status === "blocked") return blockedSlotsApi.adminNoShow(b.id);
+          return null;
         }
-        if (kind === "confirm" && b.status === "in_attesa") await bookingsApi.adminConfirm(id);
-        else if (kind === "complete" && b.status === "confermata") await bookingsApi.adminComplete(id);
-        else if (kind === "no_show" && b.status === "confermata") await bookingsApi.adminNoShow(id);
-        else if (kind === "delete" && ["in_attesa", "confermata"].includes(b.status)) await bookingsApi.adminCancel(id);
-      }
+        if (kind === "confirm" && b.status === "in_attesa") return bookingsApi.adminConfirm(b.id);
+        if (kind === "complete" && b.status === "confermata") return bookingsApi.adminComplete(b.id);
+        if (kind === "no_show" && b.status === "confermata") return bookingsApi.adminNoShow(b.id);
+        if (kind === "delete" && ["in_attesa", "confermata"].includes(b.status)) return bookingsApi.adminCancel(b.id);
+        return null;
+      })
+      .filter(Boolean);
+    try {
+      const results = await Promise.allSettled(tasks);
+      const failed = results.filter((r) => r.status === "rejected");
+      setSelected(new Set());
       await reload();
+      if (failed.length) toast.error(`${failed.length} azione/i non riuscite`, { description: extractError(failed[0].reason) });
     } catch (err) {
       toast.error("Azione non riuscita", { description: extractError(err) });
     } finally {
@@ -247,6 +255,11 @@ export default function CalendarView({
     () => (data && data.open ? data.slots.filter((s) => s.available && !past && inFilter(s.time, timeFilter, customFrom, customTo)) : []),
     [data, past, timeFilter, customFrom, customTo]
   );
+  const filteredSlots = useMemo(
+    () => (data ? data.slots.filter((s) => inFilter(s.time, timeFilter, customFrom, customTo)) : []),
+    [data, timeFilter, customFrom, customTo]
+  );
+  const bookedTimes = useMemo(() => new Set(visibleBookings.map((b) => b.startTime)), [visibleBookings]);
 
   const openBlockDialog = () => {
     setBlockName("");
@@ -275,7 +288,7 @@ export default function CalendarView({
       <li key={b.id} className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3 ${noShow ? "border-destructive/40 bg-destructive-soft" : "border-border bg-secondary/40"} ${completed || cancelled ? "opacity-60" : ""}`}>
         <div className="flex min-w-0 items-start gap-3">
           {(pending || confirmed || blockActive) && (
-            <Checkbox checked={selected.has(b.id)} onCheckedChange={() => toggleSelect(b.id)} className="mt-1" />
+            <Checkbox checked={selected.has(b.id)} onCheckedChange={() => toggleSelect(b.id)} disabled={readOnly} className="mt-1" />
           )}
           <div className="min-w-0">
             <p className="font-mono text-sm font-semibold">{b.startTime}</p>
@@ -478,12 +491,12 @@ export default function CalendarView({
           <div className={mode === "admin" ? "lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-6" : undefined}>
            <div className="min-w-0">
             <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-              {data.slots.filter((s) => inFilter(s.time, timeFilter, customFrom, customTo)).map((slot) => {
+              {filteredSlots.map((slot) => {
                 const style = STATUS_STYLE[slot.status] || STATUS_STYLE.free;
                 const slotPast = past || (isToday(dateStr) && slot.time <= nowTimeStr());
                 const isSelectable = mode === "booking" && slot.available && !slotPast;
                 const isSelected = selectedSlot === slot.time;
-                const hasBookings = visibleBookings.some((b) => b.startTime === slot.time);
+                const hasBookings = bookedTimes.has(slot.time);
                 const bookingChip = slot.available ? "bg-success-soft text-success-soft-foreground" : "bg-destructive-soft text-destructive-soft-foreground";
                 const bookingDot = slot.available ? "bg-success" : "bg-destructive";
                 return (
@@ -558,10 +571,10 @@ export default function CalendarView({
                   <h4 className="font-heading text-sm font-semibold">Prenotazioni del giorno ({visibleBookings.length}){queryStaff !== "any" ? ` · ${(data?.operators || []).find((o) => o.id === queryStaff)?.name || "operatore"}` : ""}</h4>
                   {selected.size > 0 && (
                     <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="outline" onClick={() => bulkAction("confirm")} disabled={!!actionLoading}><CheckCircle2 className="mr-1 h-4 w-4" /> Conferma ({selected.size})</Button>
-                      <Button size="sm" variant="default" onClick={() => bulkAction("complete")} disabled={!!actionLoading}><Check className="mr-1 h-4 w-4" /> Completa ({selected.size})</Button>
-                      <Button size="sm" variant="outline" onClick={() => bulkAction("no_show")} disabled={!!actionLoading}><UserX className="mr-1 h-4 w-4" /> No-show ({selected.size})</Button>
-                      <Button size="sm" variant="outline" onClick={() => bulkAction("delete")} disabled={!!actionLoading}><Trash2 className="mr-1 h-4 w-4" /> Elimina ({selected.size})</Button>
+                      <Button size="sm" variant="outline" onClick={() => bulkAction("confirm")} disabled={readOnly || !!actionLoading}><CheckCircle2 className="mr-1 h-4 w-4" /> Conferma ({selected.size})</Button>
+                      <Button size="sm" variant="default" onClick={() => bulkAction("complete")} disabled={readOnly || !!actionLoading}><Check className="mr-1 h-4 w-4" /> Completa ({selected.size})</Button>
+                      <Button size="sm" variant="outline" onClick={() => bulkAction("no_show")} disabled={readOnly || !!actionLoading}><UserX className="mr-1 h-4 w-4" /> No-show ({selected.size})</Button>
+                      <Button size="sm" variant="outline" onClick={() => bulkAction("delete")} disabled={readOnly || !!actionLoading}><Trash2 className="mr-1 h-4 w-4" /> Elimina ({selected.size})</Button>
                     </div>
                   )}
                 </div>
