@@ -23,16 +23,8 @@
   dipendono dal timezone di default del container (spesso UTC), con possibili slot
   rifiutati o accettati erroneamente di 1-2 ore.
 
-## Immagini / branding
+## Push notifications (Firebase Cloud Messaging)
 
-- [ ] Generare la favicon dal logo del salone e aggiungerla in `public/` (`index.html` ha
-  un commento `TODO` nel punto dove va ricollegata).
-- [ ] Sostituire il logo placeholder: `SALON.logo_url` in `src/lib/salonConfig.js` è vuoto,
-  `Logo.jsx` mostra un rettangolo grigio di fallback finché non c'è un caricamento
-  immagini lato admin (previsto, non ancora implementato) o un URL statico da usare
-  nel frattempo.
-- [ ] Quando si sceglie il provider di storage immagini S3-compatibile (vedi CLAUDE.md),
-  valorizzare `WIX_MEDIA_HOSTS` in `src/components/ui/image.jsx` se il provider scelto
-  supporta transform URL simili, altrimenti adattare la logica di resize.
-- [ ] Aggiungere `public/manifest.json` quando si configura la PWA (necessaria per le push
-  su iOS, che funzionano solo da app installata sulla schermata Home — vedi CLAUDE.md).
+- [ ] Le icone in `public/manifest.json` puntano entrambe a `public/img/logo.png`
+  (1024×1024, ridimensionata dal browser): va bene per l'MVP, meglio generare asset
+  192×192/512×512 dedicati prima del lancio.

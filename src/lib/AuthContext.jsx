@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { authApi } from '@/api/authApi';
-import { registerPushToken } from '@/lib/pushRegistration';
+import { registerPushToken, unregisterPushToken } from '@/lib/pushRegistration';
 
 const AuthContext = createContext();
 
@@ -62,6 +62,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    //Rimosso finché la sessione è ancora valida (serve il cookie/token per l'endpoint DELETE).
+    await unregisterPushToken();
     //Stato locale ripulito subito (UI reattiva); la revoca del refresh token lato
     //server avviene in background e non deve bloccare la navigazione post-logout.
     setUser(null);

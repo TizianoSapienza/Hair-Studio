@@ -96,13 +96,24 @@ export async function cancelUserBooking(userId, bookingId) {
     throw conflict("La prenotazione non può più essere cancellata");
   }
 
-  const { rows: updated } = await pool.query(
-    `UPDATE bookings SET status = 'cancellata', updated_at = now() WHERE id = $1 RETURNING *`,
-    [bookingId]
-  );
+  let createdNotifications = [];
+  const updated = await withTransaction(async (client) => {
+    const { rows: updatedRows } = await client.query(
+      `UPDATE bookings SET status = 'cancellata', updated_at = now() WHERE id = $1 RETURNING *`,
+      [bookingId]
+    );
+    const updatedBooking = updatedRows[0];
+    createdNotifications = await notifyAllAdmins(client, {
+      type: "prenotazione_cancellata",
+      message: `${updatedBooking.client_name} ha cancellato la prenotazione per ${updatedBooking.service_name} il ${updatedBooking.booking_date} alle ${updatedBooking.start_time}`,
+      bookingId: updatedBooking.id,
+    });
+    return updatedBooking;
+  });
 
-  publishAdminEvent({ type: "booking_updated", booking: updated[0] });
-  return updated[0];
+  publishAdminEvent({ type: "booking_updated", booking: updated });
+  publishNotifications(createdNotifications);
+  return updated;
 }
 
 export async function adminListBookings({ date, from, to, staffId, status, q }) {

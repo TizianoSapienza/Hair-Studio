@@ -16,7 +16,7 @@ export default function Logo({ withText = true, size = "md" }) {
   return (
     <span className="flex shrink-0 items-center gap-2 whitespace-nowrap">
       <Image
-        src={businessInfo?.logoUrl || SALON.logo_url}
+        src={businessInfo?.logoUrl || "/img/logo.png"}
         alt={name}
         fittingType="fill"
         className={`${box} rounded-full overflow-hidden`}
