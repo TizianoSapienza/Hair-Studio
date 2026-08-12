@@ -89,6 +89,11 @@ export default function Booking() {
       setAssignedStaff(result?.booking?.staffName || staffLabel);
       setSuccess(true);
       setRefreshKey((k) => k + 1);
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        import("canvas-confetti").then(({ default: confetti }) => {
+          confetti({ particleCount: 100, spread: 75, origin: { y: 0.6 }, colors: ["#D58C20", "#F2C572", "#1A1A1A"] });
+        });
+      }
     } catch (err) {
       toast.error("Impossibile prenotare", { description: extractError(err) });
       setConfirmOpen(false);

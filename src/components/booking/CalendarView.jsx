@@ -492,7 +492,7 @@ export default function CalendarView({
                     disabled={mode === "booking" && !isSelectable}
                     onClick={() => { if (mode === "admin") { setSlotModal(slot.time); return; } if (isSelectable) onSlotSelect && onSlotSelect(slot.time); }}
                     className={[
-                      "flex flex-col items-start rounded-xl border p-3 text-left transition-all",
+                      "flex flex-col items-start rounded-xl border p-3 text-left transition-[color,background-color,border-color,box-shadow] duration-150 ease-out",
                       isSelected ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/30" : "border-border",
                       mode === "booking" && isSelectable ? "hover:border-primary hover:shadow-sm cursor-pointer" : "",
                       mode === "admin" ? "hover:border-primary/60 cursor-pointer" : "",
@@ -541,7 +541,7 @@ export default function CalendarView({
                         const sel = blockSelection.has(s.time);
                         return (
                           <button key={s.time} type="button" onClick={() => toggleBlockSelect(s.time)}
-                            className={["rounded-full border px-3 py-1.5 text-sm font-medium transition-all",
+                            className={["rounded-full border px-3 py-1.5 text-sm font-medium transition-[color,background-color,border-color,box-shadow] duration-150 ease-out",
                               sel ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/30" : "border-border bg-card hover:border-primary/50"].join(" ")}>
                             {s.time}
                           </button>
@@ -603,7 +603,7 @@ export default function CalendarView({
                   const busy = blockTimes.some((t) => opBusyAt(op.id, t));
                   return (
                     <button type="button" key={op.id} disabled={busy} onClick={() => setBlockStaff(op.id)}
-                      className={["rounded-full border px-3 py-1.5 text-sm font-medium transition-all",
+                      className={["rounded-full border px-3 py-1.5 text-sm font-medium transition-[color,background-color,border-color,box-shadow] duration-150 ease-out",
                         blockStaff === op.id ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/30" : "border-border bg-card",
                         busy ? "opacity-40 cursor-not-allowed" : "hover:border-primary/50"].join(" ")}>
                       {op.name}{busy ? " · occupato" : ""}
@@ -611,7 +611,7 @@ export default function CalendarView({
                   );
                 })}
                 <button type="button" onClick={() => setBlockStaff("")}
-                  className={["rounded-full border px-3 py-1.5 text-sm font-medium transition-all",
+                  className={["rounded-full border px-3 py-1.5 text-sm font-medium transition-[color,background-color,border-color,box-shadow] duration-150 ease-out",
                     blockStaff === "" ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/30" : "border-border bg-card hover:border-primary/50"].join(" ")}>
                   Tutti gli operatori
                 </button>

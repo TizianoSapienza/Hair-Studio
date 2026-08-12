@@ -14,14 +14,14 @@ export default function Contact() {
   const address = info?.address || SALON.address;
   const phone = info?.phone || SALON.phone;
   const email = info?.email || SALON.email;
-  const instagram = safeHref(info?.instagramUrl || SALON.instagram);
+  const instagram = safeHref(info?.instagramUrl);
   const googleMapsUrl = safeHref(info?.googleMapsUrl);
   const googleReviewUrl = safeHref(info?.googleReviewUrl);
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 
   return (
     <div className="flex min-h-screen flex-col">
-      <SeoJsonLd title="Contatti | Hair Studio Mascalucia" description="Contatta Hair Studio a Mascalucia: indirizzo, telefono, email e Instagram. Prenota online il tuo appuntamento." />
+      <SeoJsonLd description="Contatta Hair Studio: indirizzo, telefono, email e Instagram. Prenota online il tuo appuntamento." />
       <SiteHeader minimal />
       <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-16 sm:px-6">
         <p className="text-sm font-semibold uppercase tracking-wider text-primary-ink">Contatti</p>

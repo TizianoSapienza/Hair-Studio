@@ -30,7 +30,11 @@ export function ThemeProvider({ children }) {
     };
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (document.startViewTransition && !reduceMotion) {
-      document.startViewTransition(apply);
+      window.dispatchEvent(new CustomEvent("hs:theme-transition-start"));
+      const transition = document.startViewTransition(apply);
+      transition.finished.finally(() => {
+        window.dispatchEvent(new CustomEvent("hs:theme-transition-end"));
+      });
     } else {
       apply();
     }

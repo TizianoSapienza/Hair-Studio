@@ -13,7 +13,7 @@ export default function SiteFooter() {
   const name = info?.businessName || SALON.name;
   const phone = info?.phone || SALON.phone;
   const facebookUrl = safeHref(info?.facebookUrl);
-  const instagram = safeHref(info?.instagramUrl || SALON.instagram);
+  const instagram = safeHref(info?.instagramUrl);
   const googleMapsUrl = safeHref(info?.googleMapsUrl);
   const description = home?.footerDescription || SALON.tagline;
 

@@ -1,5 +1,6 @@
 import { Suspense, lazy } from 'react';
 import { Toaster } from "@/components/ui/sonner"
+import { TooltipProvider } from "@/components/ui/tooltip"
 import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClientInstance } from '@/lib/query-client'
 import { BrowserRouter as Router, Route, Navigate } from 'react-router-dom';
@@ -53,6 +54,7 @@ function App() {
     <ThemeProvider>
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
+        <TooltipProvider delayDuration={400} skipDelayDuration={200}>
         <ErrorBoundary>
         <Router>
           <ScrollToTop />
@@ -90,6 +92,7 @@ function App() {
         </Router>
         </ErrorBoundary>
         <Toaster />
+        </TooltipProvider>
       </QueryClientProvider>
     </AuthProvider>
     </ThemeProvider>

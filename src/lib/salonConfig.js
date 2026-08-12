@@ -7,11 +7,6 @@ export const SALON = {
   phone: "+39 340 000 0000",
   email: "info@hairstudio.it",
   logo_url: "",
-  instagram: "https://www.instagram.com",
-  facebook: "https://www.facebook.com",
-  mapsUrl: "https://google.com",
-  mapsEmbed:
-    "https://www.google.com/maps",
 };
 
 export const DAY_LABELS_LONG = [

@@ -38,7 +38,7 @@ export default function Hero() {
           animate={{ opacity: 1, y: 0 }}
           transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.7, delay: 0.2 }}
         >
-          {content?.heroTitle || "Stile che si taglia su misura, a Mascalucia."}
+          {content?.heroTitle || "Stile che si taglia su misura."}
         </motion.h1>
         <motion.p
           className="mt-4 max-w-xl text-sm text-white/85 sm:text-lg"

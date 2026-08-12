@@ -4,9 +4,9 @@ import Reveal from "./Reveal";
 import useHomepageContent from "@/hooks/useHomepageContent";
 
 const PHOTOS = [
-  "https://images.unsplash.com/photo-1521590832167-7bcbfaa6381f?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1503951914875-452162b0f3f1?auto=format&fit=crop&w=1200&q=80",
-  "https://images.unsplash.com/photo-1622286342621-4bd786c2447c?auto=format&fit=crop&w=1200&q=80",
+  "/img/gallery_1.jpg",
+  "/img/gallery_2.jpg",
+  "/img/gallery_3.jpg",
 ];
 
 export default function GallerySection() {

@@ -4,7 +4,7 @@ import useBusinessInfo from "@/hooks/useBusinessInfo";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-export default function SeoJsonLd({ title, description }) {
+export default function SeoJsonLd({ description }) {
   const { data: info } = useBusinessInfo();
 
   useEffect(() => {
@@ -29,13 +29,13 @@ export default function SeoJsonLd({ title, description }) {
           "@context": "https://schema.org",
           "@type": "HairSalon",
           "name": name,
-          "address": {
-            "@type": "PostalAddress",
-            "streetAddress": address,
-            "addressLocality": "Mascalucia",
-            "addressRegion": "CT",
-            "addressCountry": "IT",
-          },
+          ...(address && {
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": address,
+              "addressCountry": "IT",
+            },
+          }),
           "telephone": phone,
           "openingHoursSpecification": specs,
         };
@@ -49,7 +49,6 @@ export default function SeoJsonLd({ title, description }) {
       }
     })();
 
-    if (title) document.title = title;
     let metaDesc = null;
     if (description) {
       metaDesc = document.querySelector('meta[name="description"]');
@@ -65,7 +64,7 @@ export default function SeoJsonLd({ title, description }) {
       cancelled = true;
       if (scriptEl && scriptEl.parentNode) scriptEl.parentNode.removeChild(scriptEl);
     };
-  }, [info, title, description]);
+  }, [info, description]);
 
   return null;
 }

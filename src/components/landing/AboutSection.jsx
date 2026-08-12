@@ -18,7 +18,7 @@ export default function AboutSection() {
       <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 md:grid-cols-2">
         <Reveal className="relative">
           <Image
-            src={content?.aboutImageUrl || "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?auto=format&fit=crop&w=900&q=80"}
+            src={content?.aboutImageUrl || "/img/about.jpg"}
             alt="Barbiere al lavoro"
             fittingType="fill"
             className="aspect-[4/5] w-full rounded-3xl"

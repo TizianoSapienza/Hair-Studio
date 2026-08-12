@@ -1,6 +1,6 @@
 # Hair Studio
 
-Webapp di prenotazione online per **Hair Studio**, barbershop maschile a Mascalucia (CT) con tre operatori fissi (Antonio, Andrea, Santo). Landing page pubblica, autenticazione utenti, prenotazione appuntamenti con calendario a slot, dashboard admin per gestione completa di prenotazioni/servizi/staff/contenuti.
+Webapp di prenotazione online per **Hair Studio**, barbershop maschile con tre operatori fissi. Landing page pubblica, autenticazione utenti, prenotazione appuntamenti con calendario a slot, dashboard admin per gestione completa di prenotazioni/servizi/staff/contenuti.
 
 Il progetto nasce come riscrittura completa di un prototipo Base44 (no-code, backend proprietario): l'obiettivo è uno stack posseduto interamente, senza dipendenze da piattaforme terze per auth e database. Vedi `CLAUDE.md` per il contesto di progetto esteso.
 
