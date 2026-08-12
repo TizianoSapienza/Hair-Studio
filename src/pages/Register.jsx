@@ -9,6 +9,7 @@ import { UserPlus, Mail, Lock, User, Phone, Loader2, Eye, EyeOff, Check, X } fro
 import AuthLayout from "@/components/AuthLayout";
 import { safeReturnTo } from "@/lib/authReturnTo";
 import { PASSWORD_REGEX } from "@/lib/passwordRules";
+import { normalizePhoneDigits, PHONE_DIGITS_REGEX } from "@/lib/phone";
 
 const CountryCodeSelect = React.lazy(() => import("@/components/profile/CountryCodeSelect"));
 
@@ -55,8 +56,8 @@ export default function Register() {
     }
     if (password !== confirmPassword) { setError("Le password non coincidono"); return; }
 
-    const num = phone.replace(/\s+/g, "").replace(/^(0+)/, "");
-    if (!num) { setError("Inserisci il numero di telefono"); return; }
+    const num = normalizePhoneDigits(phone, code);
+    if (!PHONE_DIGITS_REGEX.test(num)) { setError("Inserisci un numero di telefono valido"); return; }
     const fullPhone = `${code} ${num}`;
 
     setLoading(true);
@@ -64,7 +65,7 @@ export default function Register() {
       const result = await register({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        email,
+        email: email.trim(),
         phone: fullPhone,
         password,
       });

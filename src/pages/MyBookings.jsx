@@ -4,21 +4,27 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { bookingsApi } from "@/api/bookingsApi";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CalendarDays, Ban, Loader2, Scissors, Clock } from "lucide-react";
+import { CalendarDays, Ban, Loader2, Scissors, Clock, AlertTriangle } from "lucide-react";
 import SiteHeader from "@/components/layout/SiteHeader";
 import { toast } from "sonner";
 import { formatDateIT } from "@/lib/salonConfig";
+import { useSse } from "@/hooks/useSse";
 
 export default function MyBookings() {
   const queryClient = useQueryClient();
 
-  const { data: bookings = [], isLoading: loading } = useQuery({
+  const { data: bookings = [], isLoading: loading, isError, refetch } = useQuery({
     queryKey: ["myBookings"],
     queryFn: async () => {
       const res = await bookingsApi.listMine();
       return res.bookings || [];
     },
   });
+
+  //Se l'admin conferma/cancella una prenotazione mentre l'utente ha questa pagina aperta,
+  //il /notifications/stream (già usato da NotificationBell per lo stesso evento) fa da
+  //trigger per invalidare la query, senza aprire un canale SSE dedicato.
+  useSse("/notifications/stream", () => queryClient.invalidateQueries({ queryKey: ["myBookings"] }), true);
 
   const cancelMutation = useMutation({
     mutationFn: async (id) => bookingsApi.cancelMine(id),
@@ -64,6 +70,13 @@ export default function MyBookings() {
                 </li>
               ))}
             </ul>
+          ) : isError ? (
+            <div className="rounded-2xl border border-dashed border-destructive/40 bg-destructive-soft p-12 text-center">
+              <AlertTriangle className="mx-auto h-10 w-10 text-destructive" />
+              <p className="mt-3 font-medium text-destructive-soft-foreground">Impossibile caricare le prenotazioni</p>
+              <p className="text-sm text-muted-foreground">Controlla la connessione o riprova.</p>
+              <Button variant="outline" className="mt-5" onClick={() => refetch()}>Riprova</Button>
+            </div>
           ) : upcoming.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center">
               <Scissors className="mx-auto h-10 w-10 text-muted-foreground" />

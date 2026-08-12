@@ -7,3 +7,13 @@ export function splitPhone(raw) {
   if (spaceIdx === -1) return { code: "+39", number: str };
   return { code: str.slice(0, spaceIdx), number: str.slice(spaceIdx + 1) };
 }
+
+//Rimuove spazi e lo 0 iniziale prima di anteporre il prefisso internazionale.
+//L'Italia è tra le poche eccezioni alla convenzione: lo 0 iniziale fa parte del numero (fissi)
+//e va mantenuto anche con il prefisso +39 — altrove è un trunk prefix da scartare.
+export function normalizePhoneDigits(raw, code) {
+  const stripped = String(raw || "").replace(/\s+/g, "");
+  return code === "+39" ? stripped : stripped.replace(/^0+/, "");
+}
+
+export const PHONE_DIGITS_REGEX = /^\d{6,}$/;

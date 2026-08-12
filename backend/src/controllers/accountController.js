@@ -2,7 +2,7 @@ import { pool } from "../db/pool.js";
 import { deleteUser, findUserByEmail, toPublicUser, updateUserProfile } from "../services/userService.js";
 import { clearAuthCookies } from "../services/tokenService.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { conflict } from "../utils/AppError.js";
+import { conflict, forbidden } from "../utils/AppError.js";
 
 export const updateProfile = asyncHandler(async (req, res) => {
   const { firstName, lastName, email, phone } = req.body;
@@ -28,6 +28,9 @@ export const updateProfile = asyncHandler(async (req, res) => {
 });
 
 export const deleteAccount = asyncHandler(async (req, res) => {
+  if (req.user.role === "admin") {
+    throw forbidden("L'account amministratore non può essere eliminato da qui");
+  }
   //Le prenotazioni collegate restano (user_id -> NULL via FK ON DELETE SET NULL),
   //così da non perdere lo storico/statistiche admin, come deciso in fase di design.
   await deleteUser(req.user.id);
