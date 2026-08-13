@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Plus, Trash2, Loader2, Save, ArrowLeft, CalendarOff } from "lucide-react";
 import AdminHeader from "@/components/layout/AdminHeader";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
 import { DAY_LABELS_LONG, formatDateIT } from "@/lib/salonConfig";
 
@@ -143,7 +145,7 @@ export default function ManageSchedule() {
 
         <div className="space-y-8 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0 lg:items-start">
           {loadingOh ? (
-            <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            <LoadingSpinner />
           ) : (
             <form onSubmit={handleSaveOh} className="space-y-5 rounded-2xl border border-border bg-card p-5 sm:p-6">
               <div className="flex items-center justify-between">
@@ -185,12 +187,9 @@ export default function ManageSchedule() {
               <Button size="sm" onClick={() => { setClosureForm(EMPTY_CLOSURE); setClosureOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Aggiungi</Button>
             </div>
             {loadingCl ? (
-              <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+              <LoadingSpinner className="py-10" />
             ) : closures.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border p-8 text-center">
-                <CalendarOff className="mx-auto h-8 w-8 text-muted-foreground" />
-                <p className="mt-2 text-sm text-muted-foreground">Nessuna chiusura programmata.</p>
-              </div>
+              <EmptyState icon={CalendarOff} title="Nessuna chiusura programmata." className="rounded-xl p-8" />
             ) : (
               <ul className="space-y-2">
                 {closures.map((c) => (

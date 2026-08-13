@@ -32,6 +32,14 @@ export async function getMessagingInstance() {
   }
 }
 
+//Il service worker gira in un contesto separato e non può leggere import.meta.env, quindi
+//la config (non segreta: è lo stesso oggetto già presente nel bundle client) gli viene
+//passata via query string sull'URL di registrazione.
+async function registerMessagingSw() {
+  const params = new URLSearchParams(firebaseConfig).toString();
+  return navigator.serviceWorker.register(`/firebase-messaging-sw.js?${params}`);
+}
+
 export async function requestFcmToken() {
   try {
     const messaging = await getMessagingInstance();
@@ -46,7 +54,8 @@ export async function requestFcmToken() {
       }
     }
 
-    const token = await getToken(messaging, { vapidKey: FCM_VAPID_KEY });
+    const swRegistration = await registerMessagingSw();
+    const token = await getToken(messaging, { vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: swRegistration });
     return token || null;
   } catch (e) {
     console.warn("FCM token error:", e);

@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { staffApi } from "@/api/catalogApi";
@@ -10,9 +10,12 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Pencil, Loader2, UserCircle2, ArrowLeft, GripVertical } from "lucide-react";
 import { Image } from "@/components/ui/image";
 import { ImageUploadField } from "@/components/admin/ImageUploadField";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import AdminHeader from "@/components/layout/AdminHeader";
 import { toast } from "sonner";
 import { extractError } from "@/lib/apiError";
+import { useDragReorder } from "@/hooks/useDragReorder";
 
 export default function ManageStaff() {
   const queryClient = useQueryClient();
@@ -22,17 +25,20 @@ export default function ManageStaff() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ name: "", photoUrl: "", specialization: "" });
   const [saving, setSaving] = useState(false);
-  const [reordering, setReordering] = useState(false);
+  const loadIdRef = useRef(0);
 
+  //Scarta le risposte fuori ordine se il fetch viene richiamato più volte rapidamente
+  //(stesso pattern anti-race di useCalendarData/useSiteData).
   const load = useCallback(async () => {
+    const myId = ++loadIdRef.current;
     setLoading(true);
     try {
       const res = await staffApi.adminList();
-      setStaff(res.staff || []);
+      if (myId === loadIdRef.current) setStaff(res.staff || []);
     } catch {
-      setStaff([]);
+      if (myId === loadIdRef.current) setStaff([]);
     } finally {
-      setLoading(false);
+      if (myId === loadIdRef.current) setLoading(false);
     }
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -66,22 +72,12 @@ export default function ManageStaff() {
     }
   };
 
-  const onDragEnd = async (result) => {
-    if (!result.destination || result.source.index === result.destination.index) return;
-    const reordered = Array.from(staff);
-    const [moved] = reordered.splice(result.source.index, 1);
-    reordered.splice(result.destination.index, 0, moved);
-    setStaff(reordered);
-    setReordering(true);
-    try {
-      await staffApi.adminReorder(reordered.map((s) => s.id));
-    } catch (err) {
-      toast.error("Errore nel riordino", { description: extractError(err) });
-      await load();
-    } finally {
-      setReordering(false);
-    }
-  };
+  const { reordering, onDragEnd } = useDragReorder({
+    items: staff,
+    setItems: setStaff,
+    reorderFn: staffApi.adminReorder,
+    reload: load,
+  });
 
   return (
     <div className="flex min-h-screen flex-col bg-secondary/30">
@@ -97,12 +93,9 @@ export default function ManageStaff() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          <LoadingSpinner />
         ) : staff.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center">
-            <UserCircle2 className="mx-auto h-10 w-10 text-muted-foreground" />
-            <p className="mt-3 font-medium">Nessun operatore</p>
-          </div>
+          <EmptyState icon={UserCircle2} title="Nessun operatore" />
         ) : (
           <DragDropContext onDragEnd={onDragEnd}>
             <Droppable droppableId="staff" isDropDisabled={reordering}>

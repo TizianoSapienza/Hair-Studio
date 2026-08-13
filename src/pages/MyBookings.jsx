@@ -1,24 +1,33 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { bookingsApi } from "@/api/bookingsApi";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CalendarDays, Ban, Loader2, Scissors, Clock } from "lucide-react";
+import { CalendarDays, Ban, Loader2, Scissors, Clock, AlertTriangle } from "lucide-react";
 import SiteHeader from "@/components/layout/SiteHeader";
+import { EmptyState } from "@/components/ui/empty-state";
+import BookingStatusBadge from "@/components/booking/BookingStatusBadge";
 import { toast } from "sonner";
 import { formatDateIT } from "@/lib/salonConfig";
+import { useSse } from "@/hooks/useSse";
+import { isCancellableBooking, UPCOMING_BOOKING_STATUSES } from "@/lib/bookingStatus";
 
 export default function MyBookings() {
   const queryClient = useQueryClient();
 
-  const { data: bookings = [], isLoading: loading } = useQuery({
+  const { data: bookings = [], isLoading: loading, isError, refetch } = useQuery({
     queryKey: ["myBookings"],
     queryFn: async () => {
       const res = await bookingsApi.listMine();
       return res.bookings || [];
     },
   });
+
+  //Se l'admin conferma/cancella una prenotazione mentre l'utente ha questa pagina aperta,
+  //il /notifications/stream (già usato da NotificationBell per lo stesso evento) fa da
+  //trigger per invalidare la query, senza aprire un canale SSE dedicato.
+  useSse("/notifications/stream", () => queryClient.invalidateQueries({ queryKey: ["myBookings"] }), true);
 
   const cancelMutation = useMutation({
     mutationFn: async (id) => bookingsApi.cancelMine(id),
@@ -35,9 +44,12 @@ export default function MyBookings() {
     onSuccess: () => toast.success("Prenotazione cancellata"),
   });
 
-  const upcoming = bookings
-    .filter((b) => ["in_attesa", "confermata", "completata"].includes(b.status))
-    .sort((a, b) => (a.bookingDate + a.startTime).localeCompare(b.bookingDate + b.startTime));
+  const upcoming = useMemo(
+    () => bookings
+      .filter((b) => UPCOMING_BOOKING_STATUSES.includes(b.status))
+      .sort((a, b) => (a.bookingDate + a.startTime).localeCompare(b.bookingDate + b.startTime)),
+    [bookings]
+  );
 
   return (
     <div className="flex min-h-screen flex-col bg-secondary/30">
@@ -64,13 +76,17 @@ export default function MyBookings() {
                 </li>
               ))}
             </ul>
-          ) : upcoming.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center">
-              <Scissors className="mx-auto h-10 w-10 text-muted-foreground" />
-              <p className="mt-3 font-medium">Nessuna prenotazione</p>
-              <p className="text-sm text-muted-foreground">Prenota il tuo prossimo appuntamento.</p>
-              <Button asChild className="mt-5"><Link to="/prenota">Prenota ora</Link></Button>
+          ) : isError ? (
+            <div className="rounded-2xl border border-dashed border-destructive/40 bg-destructive-soft p-12 text-center">
+              <AlertTriangle className="mx-auto h-10 w-10 text-destructive" />
+              <p className="mt-3 font-medium text-destructive-soft-foreground">Impossibile caricare le prenotazioni</p>
+              <p className="text-sm text-muted-foreground">Controlla la connessione o riprova.</p>
+              <Button variant="outline" className="mt-5" onClick={() => refetch()}>Riprova</Button>
             </div>
+          ) : upcoming.length === 0 ? (
+            <EmptyState icon={Scissors} title="Nessuna prenotazione" description="Prenota il tuo prossimo appuntamento.">
+              <Button asChild className="mt-5"><Link to="/prenota">Prenota ora</Link></Button>
+            </EmptyState>
           ) : (
             <ul className="space-y-3">
               {upcoming.map((b) => (
@@ -87,16 +103,8 @@ export default function MyBookings() {
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-2">
-                    {b.status === "in_attesa" && (
-                      <span className="inline-flex items-center rounded-full bg-warning-soft px-3 py-1.5 text-xs font-medium text-warning-soft-foreground">In attesa</span>
-                    )}
-                    {b.status === "confermata" && (
-                      <span className="inline-flex items-center rounded-full bg-info-soft px-3 py-1.5 text-xs font-medium text-info-soft-foreground">Confermata</span>
-                    )}
-                    {b.status === "completata" && (
-                      <span className="inline-flex items-center rounded-full bg-success-soft px-3 py-1.5 text-xs font-medium text-success-soft-foreground">Completato</span>
-                    )}
-                    {b.status !== "completata" && (
+                    <BookingStatusBadge status={b.status} className="px-3 py-1.5" showIcon={false} />
+                    {isCancellableBooking(b.status) && (
                       <Button variant="outline" onClick={() => cancelMutation.mutate(b.id)} disabled={cancelMutation.isPending && cancelMutation.variables === b.id}>
                         {cancelMutation.isPending && cancelMutation.variables === b.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Ban className="mr-2 h-4 w-4" />}
                         Cancella

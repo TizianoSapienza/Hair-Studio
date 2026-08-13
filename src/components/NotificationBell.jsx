@@ -36,8 +36,12 @@ export default function NotificationBell() {
   const unread = items.filter((n) => !n.isRead).length;
 
   const loadingRef = useRef(false);
+  const pendingRef = useRef(false);
+  //Se un evento SSE arriva mentre una load() è già in volo, non va scartato silenziosamente:
+  //si segna come "in sospeso" e riparte subito dopo, invece di perdere l'aggiornamento.
   const load = async () => {
-    if (!user || loadingRef.current) return;
+    if (!user) return;
+    if (loadingRef.current) { pendingRef.current = true; return; }
     loadingRef.current = true;
     try {
       const res = await notificationsApi.list();
@@ -46,6 +50,7 @@ export default function NotificationBell() {
       console.warn("Impossibile caricare le notifiche", e);
     } finally {
       loadingRef.current = false;
+      if (pendingRef.current) { pendingRef.current = false; load(); }
     }
   };
 

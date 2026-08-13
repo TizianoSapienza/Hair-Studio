@@ -1,5 +1,7 @@
 import { pool } from "../db/pool.js";
 
+//Whitelist esplicita dei campi esposti al client: la riga grezza porta anche password_hash e
+//token_version, che non devono mai lasciare il backend.
 export function toPublicUser(row) {
   if (!row) return null;
   return {
@@ -23,6 +25,8 @@ export async function findUserById(id) {
   return rows[0] || null;
 }
 
+//role fissato a 'cliente': la registrazione pubblica non deve mai poter creare un admin
+//(vedi CLAUDE.md — l'account admin si crea solo via seed).
 export async function createUser({ firstName, lastName, email, phone, passwordHash }) {
   const { rows } = await pool.query(
     `INSERT INTO users (first_name, last_name, email, phone, password_hash, role)

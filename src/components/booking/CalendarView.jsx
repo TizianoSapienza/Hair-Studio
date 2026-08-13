@@ -3,6 +3,7 @@ import { scheduleApi } from "@/api/scheduleApi";
 import { bookingsApi, blockedSlotsApi } from "@/api/bookingsApi";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { HoldToConfirmButton } from "@/components/ui/hold-to-confirm-button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -10,8 +11,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { ChevronLeft, ChevronRight, Loader2, Ban, Lock, Check, CheckCircle2, Users, CalendarDays, Clock, RefreshCw, UserX, Scissors, Trash2 } from "lucide-react";
 import { formatDateIT, DAY_LABELS_LONG, timeToMinutes, minutesToTime } from "@/lib/salonConfig";
-import { toDateString } from "@/lib/dateUtils";
+import { toDateString, todayMidnight } from "@/lib/dateUtils";
 import { extractError } from "@/lib/apiError";
+import { isCancellableBooking, OCCUPYING_BOOKING_STATUSES } from "@/lib/bookingStatus";
+import BookingStatusBadge from "@/components/booking/BookingStatusBadge";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useCalendarData } from "@/hooks/useCalendarData";
 import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -24,25 +28,16 @@ function addDays(date, n) {
   return d;
 }
 function isPast(dateStr) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return new Date(dateStr + "T00:00:00") < today;
+  return new Date(dateStr + "T00:00:00") < todayMidnight();
 }
 function isToday(dateStr) {
-  const t = new Date();
-  const y = t.getFullYear();
-  const m = String(t.getMonth() + 1).padStart(2, "0");
-  const d = String(t.getDate()).padStart(2, "0");
-  return dateStr === `${y}-${m}-${d}`;
+  return dateStr === toDateString(new Date());
 }
 function nowTimeStr() {
   const d = new Date();
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return hh + ":" + mm;
+  return minutesToTime(d.getHours() * 60 + d.getMinutes());
 }
-//Stati che "occupano" fisicamente uno slot (vedi backend/src/services/scheduleService.js).
-const OCCUPYING_STATUSES = new Set(["in_attesa", "confermata"]);
+const OCCUPYING_STATUSES = new Set(OCCUPYING_BOOKING_STATUSES);
 
 const STATUS_STYLE = {
   free: { dot: "bg-success", label: "Libero", chip: "bg-success-soft text-success-soft-foreground" },
@@ -88,7 +83,8 @@ export default function CalendarView({
   onSlotSelect,
   selectedSlot,
   onAfterAction,
-  staffId = "any"
+  staffId = "any",
+  durationMinutes
 }) {
   const [actionLoading, setActionLoading] = useState(null);
   const [timeFilter, setTimeFilter] = useState("all");
@@ -108,9 +104,9 @@ export default function CalendarView({
 
   const dateStr = toDateString(date);
   const queryStaff = mode === "admin" ? staffFilter : staffId;
-  const { data, loading, load } = useCalendarData({ mode, dateStr, staffId: queryStaff, refreshKey });
+  const { data, loading, load } = useCalendarData({ mode, dateStr, staffId: queryStaff, refreshKey, durationMinutes });
 
-  useEffect(() => { setSelected(new Set()); setBlockSelection(new Set()); }, [dateStr, refreshKey]);
+  useEffect(() => { setSelected(new Set()); setBlockSelection(new Set()); }, [dateStr, refreshKey, queryStaff]);
   useEffect(() => { setPickerMonth(date); }, [date]);
 
   useEffect(() => {
@@ -124,8 +120,7 @@ export default function CalendarView({
 
   const reload = async () => { await load(); onAfterAction && onAfterAction(); };
 
-  //Mappa staffId -> intervalli occupati, calcolata una volta per risposta invece di riscandire
-  //data.bookings ad ogni chiamata di opBusyAt (usata in due loop di rendering).
+  //Mappa staffId -> intervalli occupati, calcolata una volta per risposta
   const occupiedByStaff = useMemo(() => {
     const map = new Map();
     const slotMin = data?.slotMinutes || 30;
@@ -201,22 +196,29 @@ export default function CalendarView({
     const ids = Array.from(selected);
     if (ids.length === 0) return;
     setActionLoading("bulk-" + kind);
-    try {
-      for (const id of ids) {
-        const b = (data.bookings || []).find((x) => x.id === id);
-        if (!b) continue;
+    const tasks = ids
+      .map((id) => (data.bookings || []).find((x) => x.id === id))
+      .filter(Boolean)
+      .map((b) => {
         if (b.kind === "blocked") {
-          if (kind === "delete") await blockedSlotsApi.adminDelete(id);
-          else if (kind === "complete" && b.status === "blocked") await blockedSlotsApi.adminComplete(id);
-          else if (kind === "no_show" && b.status === "blocked") await blockedSlotsApi.adminNoShow(id);
-          continue;
+          if (kind === "delete") return blockedSlotsApi.adminDelete(b.id);
+          if (kind === "complete" && b.status === "blocked") return blockedSlotsApi.adminComplete(b.id);
+          if (kind === "no_show" && b.status === "blocked") return blockedSlotsApi.adminNoShow(b.id);
+          return null;
         }
-        if (kind === "confirm" && b.status === "in_attesa") await bookingsApi.adminConfirm(id);
-        else if (kind === "complete" && b.status === "confermata") await bookingsApi.adminComplete(id);
-        else if (kind === "no_show" && b.status === "confermata") await bookingsApi.adminNoShow(id);
-        else if (kind === "delete" && ["in_attesa", "confermata"].includes(b.status)) await bookingsApi.adminCancel(id);
-      }
+        if (kind === "confirm" && b.status === "in_attesa") return bookingsApi.adminConfirm(b.id);
+        if (kind === "complete" && b.status === "confermata") return bookingsApi.adminComplete(b.id);
+        if (kind === "no_show" && b.status === "confermata") return bookingsApi.adminNoShow(b.id);
+        if (kind === "delete" && isCancellableBooking(b.status)) return bookingsApi.adminCancel(b.id);
+        return null;
+      })
+      .filter(Boolean);
+    try {
+      const results = await Promise.allSettled(tasks);
+      const failed = results.filter((r) => r.status === "rejected");
+      setSelected(new Set());
       await reload();
+      if (failed.length) toast.error(`${failed.length} azione/i non riuscite`, { description: extractError(failed[0].reason) });
     } catch (err) {
       toast.error("Azione non riuscita", { description: extractError(err) });
     } finally {
@@ -234,23 +236,29 @@ export default function CalendarView({
     [bookings, queryStaff]
   );
   const slotBookings = useMemo(
-    // b.startTime arriva da Postgres come "HH:MM:SS", slotModal come "HH:MM" (minutesToTime):
-    // confronto sui minuti invece che sulla stringa grezza per evitare il mismatch di formato.
     () => (slotModal ? visibleBookings.filter((b) => timeToMinutes(b.startTime) === timeToMinutes(slotModal)) : []),
     [slotModal, visibleBookings]
   );
-  const todayMidnight = new Date();
-  todayMidnight.setHours(0, 0, 0, 0);
-  const blockTimes = Array.from(blockSelection).sort();
+  const blockTimes = useMemo(() => Array.from(blockSelection).sort(), [blockSelection]);
 
   const blockableSlots = useMemo(
     () => (data && data.open ? data.slots.filter((s) => s.available && !past && inFilter(s.time, timeFilter, customFrom, customTo)) : []),
     [data, past, timeFilter, customFrom, customTo]
   );
+  const filteredSlots = useMemo(
+    () => (data ? data.slots.filter((s) => inFilter(s.time, timeFilter, customFrom, customTo)) : []),
+    [data, timeFilter, customFrom, customTo]
+  );
+  const bookedTimes = useMemo(() => new Set(visibleBookings.map((b) => b.startTime)), [visibleBookings]);
+  //Memoizzato
+  const busyOpIds = useMemo(
+    () => new Set((data?.operators || []).filter((op) => blockTimes.some((t) => opBusyAt(op.id, t))).map((op) => op.id)),
+    [data, blockTimes]
+  );
 
   const openBlockDialog = () => {
     setBlockName("");
-    const avail = (data?.operators || []).filter((op) => !blockTimes.some((t) => opBusyAt(op.id, t)));
+    const avail = (data?.operators || []).filter((op) => !busyOpIds.has(op.id));
     setBlockStaff(avail[0]?.id || "");
     setBlockOpen(true);
   };
@@ -275,7 +283,7 @@ export default function CalendarView({
       <li key={b.id} className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border p-3 ${noShow ? "border-destructive/40 bg-destructive-soft" : "border-border bg-secondary/40"} ${completed || cancelled ? "opacity-60" : ""}`}>
         <div className="flex min-w-0 items-start gap-3">
           {(pending || confirmed || blockActive) && (
-            <Checkbox checked={selected.has(b.id)} onCheckedChange={() => toggleSelect(b.id)} className="mt-1" />
+            <Checkbox checked={selected.has(b.id)} onCheckedChange={() => toggleSelect(b.id)} disabled={readOnly} className="mt-1" />
           )}
           <div className="min-w-0">
             <p className="font-mono text-sm font-semibold">{b.startTime}</p>
@@ -291,70 +299,48 @@ export default function CalendarView({
           </div>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2">
-          {pending && (
-            <span className="status-badge-in inline-flex items-center rounded-full bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning-soft-foreground">
-              <Clock className="mr-1 h-3.5 w-3.5" /> In attesa
-            </span>
-          )}
-          {confirmed && (
-            <span className="status-badge-in inline-flex items-center rounded-full bg-info-soft px-2.5 py-1 text-xs font-medium text-info-soft-foreground">
-              <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Confermata
-            </span>
-          )}
-          {completed && (
-            <span className="status-badge-in inline-flex items-center rounded-full bg-success-soft px-2.5 py-1 text-xs font-medium text-success-soft-foreground">
-              <Check className="mr-1 h-3.5 w-3.5" /> Completato
-            </span>
-          )}
-          {cancelled && (
-            <span className="status-badge-in inline-flex items-center rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-              <Ban className="mr-1 h-3.5 w-3.5" /> Cancellata
-            </span>
-          )}
-          {noShow && (
-            <span className="status-badge-in inline-flex items-center rounded-full bg-destructive-soft px-2.5 py-1 text-xs font-medium text-destructive-soft-foreground">
-              <UserX className="mr-1 h-3.5 w-3.5" /> No-show
-            </span>
+          {(pending || confirmed || completed || cancelled || noShow) && (
+            <BookingStatusBadge status={b.status} className="status-badge-in" />
           )}
           {(pending || confirmed || blockActive || isBlock) && (
             <div className="grid w-full grid-cols-2 gap-2">
               {pending && (
                 <>
-                  <Button size="sm" className="w-full" onClick={onConfirm} disabled={readOnly || actionLoading === "confirm-" + b.id}>
+                  <HoldToConfirmButton size="sm" className="w-full" onConfirm={onConfirm} disabled={readOnly || actionLoading === "confirm-" + b.id}>
                     {actionLoading === "confirm-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-1 h-4 w-4" /> Conferma</>}
-                  </Button>
-                  <Button size="sm" variant="outline" className="w-full" onClick={onCancel} disabled={readOnly || actionLoading === "cancel-" + b.id}>
+                  </HoldToConfirmButton>
+                  <HoldToConfirmButton size="sm" variant="outline" className="w-full" onConfirm={onCancel} disabled={readOnly || actionLoading === "cancel-" + b.id}>
                     {actionLoading === "cancel-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Ban className="mr-1 h-4 w-4" /> Cancella</>}
-                  </Button>
+                  </HoldToConfirmButton>
                 </>
               )}
               {confirmed && (
                 <>
-                  <Button size="sm" className="w-full" onClick={onComplete} disabled={readOnly || actionLoading === "complete-" + b.id}>
+                  <HoldToConfirmButton size="sm" className="w-full" onConfirm={onComplete} disabled={readOnly || actionLoading === "complete-" + b.id}>
                     {actionLoading === "complete-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-1 h-4 w-4" /> Completa</>}
-                  </Button>
-                  <Button size="sm" variant="outline" className="w-full" onClick={onNoShow} disabled={readOnly || actionLoading === "noshow-" + b.id}>
+                  </HoldToConfirmButton>
+                  <HoldToConfirmButton size="sm" variant="outline" className="w-full" onConfirm={onNoShow} disabled={readOnly || actionLoading === "noshow-" + b.id}>
                     {actionLoading === "noshow-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><UserX className="mr-1 h-4 w-4" /> No-show</>}
-                  </Button>
-                  <Button size="sm" variant="outline" className="col-span-2 w-full" onClick={onCancel} disabled={readOnly || actionLoading === "cancel-" + b.id}>
+                  </HoldToConfirmButton>
+                  <HoldToConfirmButton size="sm" variant="outline" className="col-span-2 w-full" onConfirm={onCancel} disabled={readOnly || actionLoading === "cancel-" + b.id}>
                     {actionLoading === "cancel-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Ban className="mr-1 h-4 w-4" /> Cancella</>}
-                  </Button>
+                  </HoldToConfirmButton>
                 </>
               )}
               {blockActive && (
                 <>
-                  <Button size="sm" className="w-full" onClick={onBlockComplete} disabled={readOnly || actionLoading === "block-complete-" + b.id}>
+                  <HoldToConfirmButton size="sm" className="w-full" onConfirm={onBlockComplete} disabled={readOnly || actionLoading === "block-complete-" + b.id}>
                     {actionLoading === "block-complete-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-1 h-4 w-4" /> Completa</>}
-                  </Button>
-                  <Button size="sm" variant="outline" className="w-full" onClick={onBlockNoShow} disabled={readOnly || actionLoading === "block-noshow-" + b.id}>
+                  </HoldToConfirmButton>
+                  <HoldToConfirmButton size="sm" variant="outline" className="w-full" onConfirm={onBlockNoShow} disabled={readOnly || actionLoading === "block-noshow-" + b.id}>
                     {actionLoading === "block-noshow-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><UserX className="mr-1 h-4 w-4" /> No-show</>}
-                  </Button>
+                  </HoldToConfirmButton>
                 </>
               )}
               {isBlock && (
-                <Button size="sm" variant="outline" className={`w-full ${blockActive ? "col-span-2" : ""}`} onClick={onRemoveBlock} disabled={readOnly || actionLoading === "cancel-" + b.id}>
+                <HoldToConfirmButton size="sm" variant="outline" className={`w-full ${blockActive ? "col-span-2" : ""}`} onConfirm={onRemoveBlock} disabled={readOnly || actionLoading === "cancel-" + b.id}>
                   {actionLoading === "cancel-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Trash2 className="mr-1 h-4 w-4" /> Rimuovi</>}
-                </Button>
+                </HoldToConfirmButton>
               )}
             </div>
           )}
@@ -385,7 +371,7 @@ export default function CalendarView({
                   <Calendar
                     mode="single" weekStartsOn={1} month={pickerMonth} onMonthChange={setPickerMonth}
                     selected={date} onSelect={(d) => { if (d) { onDateChange(d); setDatePickerOpen(false); } }}
-                    disabled={mode === "booking" ? (d) => d < todayMidnight : undefined}
+                    disabled={mode === "booking" ? (d) => d < todayMidnight() : undefined}
                     modifiers={{ closed: (d) => isClosedDay(toDateString(d), meta.openingHours, meta.closures) }}
                     modifiersClassNames={{ closed: "bg-destructive-soft text-destructive-soft-foreground line-through" }}
                     classNames={{ day_today: "" }} initialFocus />
@@ -404,7 +390,7 @@ export default function CalendarView({
                 <Calendar
                   mode="single" weekStartsOn={1} month={pickerMonth} onMonthChange={setPickerMonth}
                   selected={date} onSelect={(d) => { if (d) { onDateChange(d); setDatePickerOpen(false); } }}
-                  disabled={mode === "booking" ? (d) => d < todayMidnight : undefined}
+                  disabled={mode === "booking" ? (d) => d < todayMidnight() : undefined}
                   modifiers={{ closed: (d) => isClosedDay(toDateString(d), meta.openingHours, meta.closures) }}
                   modifiersClassNames={{ closed: "bg-destructive-soft text-destructive-soft-foreground line-through" }}
                   classNames={{ day_today: "" }} initialFocus />
@@ -467,7 +453,7 @@ export default function CalendarView({
           </div>
         ) : null}
         {loading && !data ? (
-          <div className="mt-5 flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          <LoadingSpinner className="mt-5" />
         ) : closed ? (
           <div className="py-16 text-center">
             <Lock className="mx-auto h-8 w-8 text-muted-foreground" />
@@ -478,12 +464,12 @@ export default function CalendarView({
           <div className={mode === "admin" ? "lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-6" : undefined}>
            <div className="min-w-0">
             <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
-              {data.slots.filter((s) => inFilter(s.time, timeFilter, customFrom, customTo)).map((slot) => {
+              {filteredSlots.map((slot) => {
                 const style = STATUS_STYLE[slot.status] || STATUS_STYLE.free;
                 const slotPast = past || (isToday(dateStr) && slot.time <= nowTimeStr());
                 const isSelectable = mode === "booking" && slot.available && !slotPast;
                 const isSelected = selectedSlot === slot.time;
-                const hasBookings = visibleBookings.some((b) => b.startTime === slot.time);
+                const hasBookings = bookedTimes.has(slot.time);
                 const bookingChip = slot.available ? "bg-success-soft text-success-soft-foreground" : "bg-destructive-soft text-destructive-soft-foreground";
                 const bookingDot = slot.available ? "bg-success" : "bg-destructive";
                 return (
@@ -492,7 +478,7 @@ export default function CalendarView({
                     disabled={mode === "booking" && !isSelectable}
                     onClick={() => { if (mode === "admin") { setSlotModal(slot.time); return; } if (isSelectable) onSlotSelect && onSlotSelect(slot.time); }}
                     className={[
-                      "flex flex-col items-start rounded-xl border p-3 text-left transition-all",
+                      "flex flex-col items-start rounded-xl border p-3 text-left transition-[color,background-color,border-color,box-shadow] duration-150 ease-out",
                       isSelected ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/30" : "border-border",
                       mode === "booking" && isSelectable ? "hover:border-primary hover:shadow-sm cursor-pointer" : "",
                       mode === "admin" ? "hover:border-primary/60 cursor-pointer" : "",
@@ -526,7 +512,7 @@ export default function CalendarView({
               <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-warning" /> In parte</span>
               <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-destructive" /> Occupato</span>
             </div>
-            {!readOnly && blockableSlots.length > 0 && (
+            {mode === "admin" && !readOnly && blockableSlots.length > 0 && (
                   <div className="mt-4">
                     <div className="flex items-center justify-between">
                       <p className="text-xs text-muted-foreground">Seleziona gli slot da bloccare:</p>
@@ -541,7 +527,7 @@ export default function CalendarView({
                         const sel = blockSelection.has(s.time);
                         return (
                           <button key={s.time} type="button" onClick={() => toggleBlockSelect(s.time)}
-                            className={["rounded-full border px-3 py-1.5 text-sm font-medium transition-all",
+                            className={["rounded-full border px-3 py-1.5 text-sm font-medium transition-[color,background-color,border-color,box-shadow] duration-150 ease-out",
                               sel ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/30" : "border-border bg-card hover:border-primary/50"].join(" ")}>
                             {s.time}
                           </button>
@@ -558,10 +544,10 @@ export default function CalendarView({
                   <h4 className="font-heading text-sm font-semibold">Prenotazioni del giorno ({visibleBookings.length}){queryStaff !== "any" ? ` · ${(data?.operators || []).find((o) => o.id === queryStaff)?.name || "operatore"}` : ""}</h4>
                   {selected.size > 0 && (
                     <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="outline" onClick={() => bulkAction("confirm")} disabled={!!actionLoading}><CheckCircle2 className="mr-1 h-4 w-4" /> Conferma ({selected.size})</Button>
-                      <Button size="sm" variant="default" onClick={() => bulkAction("complete")} disabled={!!actionLoading}><Check className="mr-1 h-4 w-4" /> Completa ({selected.size})</Button>
-                      <Button size="sm" variant="outline" onClick={() => bulkAction("no_show")} disabled={!!actionLoading}><UserX className="mr-1 h-4 w-4" /> No-show ({selected.size})</Button>
-                      <Button size="sm" variant="outline" onClick={() => bulkAction("delete")} disabled={!!actionLoading}><Trash2 className="mr-1 h-4 w-4" /> Elimina ({selected.size})</Button>
+                      <HoldToConfirmButton size="sm" variant="outline" onConfirm={() => bulkAction("confirm")} disabled={readOnly || !!actionLoading}><CheckCircle2 className="mr-1 h-4 w-4" /> Conferma ({selected.size})</HoldToConfirmButton>
+                      <HoldToConfirmButton size="sm" variant="default" onConfirm={() => bulkAction("complete")} disabled={readOnly || !!actionLoading}><Check className="mr-1 h-4 w-4" /> Completa ({selected.size})</HoldToConfirmButton>
+                      <HoldToConfirmButton size="sm" variant="outline" onConfirm={() => bulkAction("no_show")} disabled={readOnly || !!actionLoading}><UserX className="mr-1 h-4 w-4" /> No-show ({selected.size})</HoldToConfirmButton>
+                      <HoldToConfirmButton size="sm" variant="outline" onConfirm={() => bulkAction("delete")} disabled={readOnly || !!actionLoading}><Trash2 className="mr-1 h-4 w-4" /> Elimina ({selected.size})</HoldToConfirmButton>
                     </div>
                   )}
                 </div>
@@ -600,10 +586,10 @@ export default function CalendarView({
               <p className="text-sm font-medium">Operatore</p>
               <div className="flex flex-wrap gap-2">
                 {(data?.operators || []).map((op) => {
-                  const busy = blockTimes.some((t) => opBusyAt(op.id, t));
+                  const busy = busyOpIds.has(op.id);
                   return (
                     <button type="button" key={op.id} disabled={busy} onClick={() => setBlockStaff(op.id)}
-                      className={["rounded-full border px-3 py-1.5 text-sm font-medium transition-all",
+                      className={["rounded-full border px-3 py-1.5 text-sm font-medium transition-[color,background-color,border-color,box-shadow] duration-150 ease-out",
                         blockStaff === op.id ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/30" : "border-border bg-card",
                         busy ? "opacity-40 cursor-not-allowed" : "hover:border-primary/50"].join(" ")}>
                       {op.name}{busy ? " · occupato" : ""}
@@ -611,7 +597,7 @@ export default function CalendarView({
                   );
                 })}
                 <button type="button" onClick={() => setBlockStaff("")}
-                  className={["rounded-full border px-3 py-1.5 text-sm font-medium transition-all",
+                  className={["rounded-full border px-3 py-1.5 text-sm font-medium transition-[color,background-color,border-color,box-shadow] duration-150 ease-out",
                     blockStaff === "" ? "border-primary bg-primary/10 text-primary ring-2 ring-primary/30" : "border-border bg-card hover:border-primary/50"].join(" ")}>
                   Tutti gli operatori
                 </button>

@@ -18,7 +18,7 @@ export default function AboutSection() {
       <div className="mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 md:grid-cols-2">
         <Reveal className="relative">
           <Image
-            src={content?.aboutImageUrl || "https://images.unsplash.com/photo-1599351431202-1e0f0137899a?auto=format&fit=crop&w=900&q=80"}
+            src={content?.aboutImageUrl || "/img/about.jpg"}
             alt="Barbiere al lavoro"
             fittingType="fill"
             className="aspect-[4/5] w-full rounded-3xl"
@@ -42,8 +42,8 @@ export default function AboutSection() {
             </Button>
           </div>
           <div className="mt-8 grid divide-y divide-border border-t border-border sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:border-t-0">
-            {STATS.map((s) => (
-              <div key={s.label} className="py-4 first:pt-0 sm:px-5 sm:py-0 sm:first:pl-0 sm:first:pt-0">
+            {STATS.map((s, i) => (
+              <div key={i} className="py-4 first:pt-0 sm:px-5 sm:py-0 sm:first:pl-0 sm:first:pt-0">
                 <s.icon className="h-6 w-6 text-primary" />
                 <p className="mt-3 font-heading text-base font-semibold">{s.label}</p>
                 <p className="text-sm text-muted-foreground">{s.desc}</p>

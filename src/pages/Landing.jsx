@@ -19,7 +19,7 @@ export default function Landing() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <SeoJsonLd title="Hair Studio | Barbershop Mascalucia" description="Barbershop moderno a Mascalucia: tagli, barba e colore curati da tre professionisti. Prenota online il tuo appuntamento." />
+      <SeoJsonLd description="Barbershop moderno: tagli, barba e colore curati da tre professionisti. Prenota online il tuo appuntamento." />
       <SiteHeader />
       <main className="flex-1">
         <Hero />

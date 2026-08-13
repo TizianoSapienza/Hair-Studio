@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, Phone, Loader2, Save, Trash2, KeyRound, UserCircle } from "lucide-react";
 import SiteHeader from "@/components/layout/SiteHeader";
-import { splitPhone } from "@/lib/phone";
+import { splitPhone, normalizePhoneDigits, PHONE_DIGITS_REGEX, DEFAULT_COUNTRY_CODE } from "@/lib/phone";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/lib/AuthContext";
@@ -21,7 +21,7 @@ export default function Profile() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("+39");
+  const [code, setCode] = useState(DEFAULT_COUNTRY_CODE);
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -42,8 +42,8 @@ export default function Profile() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    const num = phone.replace(/\s+/g, "").replace(/^(0+)/, "");
-    if (!num || !/^\d{6,}$/.test(num)) {
+    const num = normalizePhoneDigits(phone, code);
+    if (!PHONE_DIGITS_REGEX.test(num)) {
       toast.error("Numero non valido", { description: "Inserisci solo le cifre del numero, senza prefisso." });
       return;
     }
@@ -52,7 +52,7 @@ export default function Profile() {
       await accountApi.updateProfile({
         firstName: firstName.trim(),
         lastName: lastName.trim(),
-        email,
+        email: email.trim(),
         phone: `${code} ${num}`,
       });
       await checkUserAuth();

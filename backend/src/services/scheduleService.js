@@ -1,7 +1,8 @@
 import { pool, withTransaction } from "../db/pool.js";
 import { minutesToTime, rangesOverlap, timeToMinutes } from "../utils/time.js";
 
-const OCCUPYING_STATUSES = ["in_attesa", "confermata"];
+//Tutto tranne "cancellata" occupa lo slot.
+export const OCCUPYING_STATUSES = ["in_attesa", "confermata", "completata", "no_show"];
 
 export async function getSlotMinutes() {
   const { rows } = await pool.query("SELECT slot_minutes FROM app_settings WHERE id = 1");
@@ -62,7 +63,7 @@ export async function getEffectiveHoursForDate(date) {
 //operatori (usata per "primo disponibile" lato cliente e filtro "Tutti" lato admin).
 //`includeDetails`=true aggiunge l'elenco prenotazioni/blocchi con i dati del cliente — MAI
 //da esporre sull'endpoint pubblico (privacy calendario, vedi CLAUDE.md).
-export async function getDayOverview(date, staffId, { includeDetails } = { includeDetails: false }) {
+export async function getDayOverview(date, staffId, { includeDetails, durationMinutes } = { includeDetails: false }) {
   const [effectiveHours, slotMinutes, operators] = await Promise.all([
     getEffectiveHoursForDate(date),
     getSlotMinutes(),
@@ -112,11 +113,18 @@ export async function getDayOverview(date, staffId, { includeDetails } = { inclu
   const total = staffIds.length;
   const slots = [];
 
+  //Se il chiamante indica la durata del servizio, uno slot è "disponibile" solo se l'intera
+  //finestra [s, s+durationMinutes) è libera e rientra nell'orario di apertura — altrimenti un
+  //servizio da più slot consecutivi (es. colore, 60') risulterebbe selezionabile su uno slot
+  //il cui successivo è già occupato, fallendo solo alla conferma della prenotazione.
+  const checkWindow = durationMinutes || slotMinutes;
+
   for (let s = startMinutes; s + slotMinutes <= endMinutes; s += slotMinutes) {
-    const slotEnd = s + slotMinutes;
+    const windowEnd = s + checkWindow;
+    const fitsBeforeClose = windowEnd <= endMinutes;
     let freeCount = 0;
     for (const id of staffIds) {
-      const busy = (occupyingByStaff.get(id) || []).some((r) => rangesOverlap(s, slotEnd, r.start, r.end));
+      const busy = !fitsBeforeClose || (occupyingByStaff.get(id) || []).some((r) => rangesOverlap(s, windowEnd, r.start, r.end));
       if (!busy) freeCount++;
     }
     slots.push({

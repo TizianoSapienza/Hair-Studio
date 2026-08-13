@@ -1,4 +1,5 @@
 import { pool, withTransaction } from "../db/pool.js";
+import { formatDateIT, formatTimeShort } from "../utils/time.js";
 import { assertSlotAvailable, findAvailableStaff } from "./scheduleService.js";
 import { createNotification, notifyAllAdmins, publishNotifications } from "./notificationService.js";
 import { publishAdminEvent } from "./realtimeService.js";
@@ -39,6 +40,14 @@ export async function createBooking({ user, serviceId, staffId, date, startTime,
       throw conflict(reason || "Nessuno slot disponibile per l'orario scelto");
     }
 
+    const { rows: existingRows } = await client.query(
+      `SELECT id FROM bookings WHERE user_id = $1 AND booking_date = $2 AND status = ANY($3::booking_status[]) LIMIT 1`,
+      [user.id, date, ACTIVE_STATUSES]
+    );
+    if (existingRows.length > 0) {
+      throw conflict("Hai già una prenotazione attiva per questa data");
+    }
+
     const { rows } = await client.query(
       `INSERT INTO bookings (
          user_id, client_name, client_email, client_phone,
@@ -65,7 +74,7 @@ export async function createBooking({ user, serviceId, staffId, date, startTime,
 
     createdNotifications = await notifyAllAdmins(client, {
       type: "nuova_prenotazione",
-      message: `Nuova prenotazione di ${created.client_name} per ${service.name} il ${date} alle ${startTime}`,
+      message: `Nuova prenotazione di ${created.client_name} per ${service.name} il ${formatDateIT(date)} alle ${startTime}`,
       bookingId: created.id,
     });
 
@@ -96,13 +105,24 @@ export async function cancelUserBooking(userId, bookingId) {
     throw conflict("La prenotazione non può più essere cancellata");
   }
 
-  const { rows: updated } = await pool.query(
-    `UPDATE bookings SET status = 'cancellata', updated_at = now() WHERE id = $1 RETURNING *`,
-    [bookingId]
-  );
+  let createdNotifications = [];
+  const updated = await withTransaction(async (client) => {
+    const { rows: updatedRows } = await client.query(
+      `UPDATE bookings SET status = 'cancellata', updated_at = now() WHERE id = $1 RETURNING *`,
+      [bookingId]
+    );
+    const updatedBooking = updatedRows[0];
+    createdNotifications = await notifyAllAdmins(client, {
+      type: "prenotazione_cancellata",
+      message: `${updatedBooking.client_name} ha cancellato la prenotazione per ${updatedBooking.service_name} il ${formatDateIT(updatedBooking.booking_date)} alle ${formatTimeShort(updatedBooking.start_time)}`,
+      bookingId: updatedBooking.id,
+    });
+    return updatedBooking;
+  });
 
-  publishAdminEvent({ type: "booking_updated", booking: updated[0] });
-  return updated[0];
+  publishAdminEvent({ type: "booking_updated", booking: updated });
+  publishNotifications(createdNotifications);
+  return updated;
 }
 
 export async function adminListBookings({ date, from, to, staffId, status, q }) {
@@ -186,7 +206,7 @@ export async function confirmBooking(id) {
     to: "confermata",
     notification: {
       type: "prenotazione_confermata",
-      message: (b) => `La tua prenotazione del ${b.booking_date} alle ${b.start_time} è stata confermata`,
+      message: (b) => `La tua prenotazione del ${formatDateIT(b.booking_date)} alle ${formatTimeShort(b.start_time)} è stata confermata`,
     },
   });
   publishAdminEvent({ type: "booking_updated", booking });
@@ -195,7 +215,7 @@ export async function confirmBooking(id) {
     subject: "Prenotazione confermata - Hair Studio",
     html: renderEmailLayout({
       title: "Prenotazione confermata",
-      bodyHtml: `<p>Ciao ${escapeHtml(booking.client_name)}, la tua prenotazione per <strong>${escapeHtml(booking.service_name)}</strong> il ${booking.booking_date} alle ${booking.start_time} è stata confermata.</p>`,
+      bodyHtml: `<p>Ciao ${escapeHtml(booking.client_name)}, la tua prenotazione per <strong>${escapeHtml(booking.service_name)}</strong> il ${formatDateIT(booking.booking_date)} alle ${formatTimeShort(booking.start_time)} è stata confermata.</p>`,
     }),
   }).catch((err) => console.error("[booking] invio email conferma fallito", err));
   return booking;
@@ -219,7 +239,7 @@ export async function cancelBookingAdmin(id) {
     to: "cancellata",
     notification: {
       type: "prenotazione_cancellata",
-      message: (b) => `La tua prenotazione del ${b.booking_date} alle ${b.start_time} è stata cancellata`,
+      message: (b) => `La tua prenotazione del ${formatDateIT(b.booking_date)} alle ${formatTimeShort(b.start_time)} è stata cancellata`,
     },
   });
   publishAdminEvent({ type: "booking_updated", booking });
@@ -228,7 +248,7 @@ export async function cancelBookingAdmin(id) {
     subject: "Prenotazione cancellata - Hair Studio",
     html: renderEmailLayout({
       title: "Prenotazione cancellata",
-      bodyHtml: `<p>Ciao ${escapeHtml(booking.client_name)}, la tua prenotazione per <strong>${escapeHtml(booking.service_name)}</strong> il ${booking.booking_date} alle ${booking.start_time} è stata cancellata.</p>`,
+      bodyHtml: `<p>Ciao ${escapeHtml(booking.client_name)}, la tua prenotazione per <strong>${escapeHtml(booking.service_name)}</strong> il ${formatDateIT(booking.booking_date)} alle ${formatTimeShort(booking.start_time)} è stata cancellata.</p>`,
     }),
   }).catch((err) => console.error("[booking] invio email cancellazione fallito", err));
   return booking;

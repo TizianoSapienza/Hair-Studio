@@ -7,11 +7,6 @@ export const SALON = {
   phone: "+39 340 000 0000",
   email: "info@hairstudio.it",
   logo_url: "",
-  instagram: "https://www.instagram.com",
-  facebook: "https://www.facebook.com",
-  mapsUrl: "https://google.com",
-  mapsEmbed:
-    "https://www.google.com/maps",
 };
 
 export const DAY_LABELS_LONG = [
@@ -22,6 +17,18 @@ export const DAY_LABELS_LONG = [
   "Giovedì",
   "Venerdì",
   "Sabato",
+];
+
+//Fallback usato sia da AdminSettings (form di modifica) sia da ContactSection (vista pubblica)
+//finché business_info.openingHoursDisplay non è ancora stato configurato da admin.
+export const DEFAULT_ORARI = [
+  { giorno: "Lunedì", orario: "", chiuso: true },
+  { giorno: "Martedì", orario: "8:30 – 19:30", chiuso: false },
+  { giorno: "Mercoledì", orario: "8:30 – 19:30", chiuso: false },
+  { giorno: "Giovedì", orario: "8:30 – 19:30", chiuso: false },
+  { giorno: "Venerdì", orario: "8:30 – 19:30", chiuso: false },
+  { giorno: "Sabato", orario: "8:30 – 19:30", chiuso: false },
+  { giorno: "Domenica", orario: "", chiuso: true },
 ];
 
 export function timeToMinutes(t) {

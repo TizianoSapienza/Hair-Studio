@@ -8,20 +8,19 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Check, Clock, Loader2, Scissors, CalendarCheck, CalendarDays, Sparkles } from "lucide-react";
 import SiteHeader from "@/components/layout/SiteHeader";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import CalendarView from "@/components/booking/CalendarView";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "sonner";
 import { formatDateIT } from "@/lib/salonConfig";
-import { toDateString } from "@/lib/dateUtils";
+import { toDateString, todayMidnight } from "@/lib/dateUtils";
 import { formatDuration } from "@/lib/format";
 import { extractError } from "@/lib/apiError";
 import useServices from "@/hooks/useServices";
 
 export default function Booking() {
   const { user } = useAuth();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const [date, setDate] = useState(today);
+  const [date, setDate] = useState(todayMidnight());
   const [selectedService, setSelectedService] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedStaff, setSelectedStaff] = useState("any");
@@ -89,6 +88,11 @@ export default function Booking() {
       setAssignedStaff(result?.booking?.staffName || staffLabel);
       setSuccess(true);
       setRefreshKey((k) => k + 1);
+      if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        import("canvas-confetti").then(({ default: confetti }) => {
+          confetti({ particleCount: 100, spread: 75, origin: { y: 0.6 }, colors: ["#D58C20", "#F2C572", "#1A1A1A"] });
+        });
+      }
     } catch (err) {
       toast.error("Impossibile prenotare", { description: extractError(err) });
       setConfirmOpen(false);
@@ -116,7 +120,7 @@ export default function Booking() {
           <div>
             <h2 className="font-heading text-lg font-semibold">Servizi</h2>
             {loadingSvc ? (
-              <div className="mt-4 flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+              <LoadingSpinner className="mt-4 py-10" />
             ) : (
               <div className="mt-4 space-y-2.5">
                 {services.map((s) => {
@@ -196,6 +200,7 @@ export default function Booking() {
                 selectedSlot={selectedSlot}
                 onSlotSelect={handleSlotSelect}
                 staffId={selectedStaff}
+                durationMinutes={selectedService?.durationMinutes}
               />
             </div>
 

@@ -1,4 +1,5 @@
 import React from "react";
+import { Button } from "@/components/ui/button";
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -29,12 +30,7 @@ export default class ErrorBoundary extends React.Component {
           <p className="text-sm text-muted-foreground">
             Si è verificato un errore inatteso. Ricarica la pagina per continuare.
           </p>
-          <button
-            onClick={this.handleReload}
-            className="rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground shadow-sm transition-colors hover:bg-primary/90"
-          >
-            Ricarica
-          </button>
+          <Button onClick={this.handleReload}>Ricarica</Button>
         </div>
       );
     }

@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { authApi } from '@/api/authApi';
-import { registerPushToken } from '@/lib/pushRegistration';
+import { registerPushToken, unregisterPushToken } from '@/lib/pushRegistration';
 
 const AuthContext = createContext();
 
@@ -22,6 +22,8 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       setUser(null);
       setIsAuthenticated(false);
+      //401 è l'esito normale per un visitatore non loggato, non un errore da segnalare —
+      //solo un fallimento diverso (rete, 500) deve popolare authError.
       if (error.status && error.status !== 401) {
         setAuthError({ type: 'unknown', message: error.message });
       }
@@ -62,6 +64,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    //Rimosso finché la sessione è ancora valida (serve il cookie/token per l'endpoint DELETE).
+    await unregisterPushToken();
     //Stato locale ripulito subito (UI reattiva); la revoca del refresh token lato
     //server avviene in background e non deve bloccare la navigazione post-logout.
     setUser(null);

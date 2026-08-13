@@ -1,15 +1,15 @@
 import { pool } from "./pool.js";
 
 const STAFF = [
-  { name: "Antonio", display_order: 0 },
-  { name: "Andrea", display_order: 1 },
-  { name: "Santo", display_order: 2 },
+  { name: "Andrea", display_order: 0 },
+  { name: "Paolo", display_order: 1 },
+  { name: "Marco", display_order: 2 },
 ];
 
 //Lun-Sab 09:00-19:00, Domenica chiuso. Placeholder: modificabile da admin dopo il seed.
 const OPENING_HOURS = [
   { day_of_week: 0, is_open: false, start_time: null, end_time: null }, //domenica
-  { day_of_week: 1, is_open: true, start_time: "09:00", end_time: "19:00" },
+  { day_of_week: 0, is_open: false, start_time: null, end_time: null }, //lunedì
   { day_of_week: 2, is_open: true, start_time: "09:00", end_time: "19:00" },
   { day_of_week: 3, is_open: true, start_time: "09:00", end_time: "19:00" },
   { day_of_week: 4, is_open: true, start_time: "09:00", end_time: "19:00" },
@@ -48,7 +48,7 @@ async function seedAppSettings(client) {
 async function seedBusinessInfo(client) {
   await client.query(
     `INSERT INTO business_info (id, business_name, address, phone)
-     VALUES (1, 'Hair Studio', 'Mascalucia (CT)', '')
+     VALUES (1, 'Hair Studio', 'Ignoto (ZZ)', '')
      ON CONFLICT (id) DO NOTHING`
   );
 }

@@ -1,6 +1,6 @@
 # Hair Studio
 
-Webapp di prenotazione online per **Hair Studio**, barbershop maschile a Mascalucia (CT) con tre operatori fissi (Antonio, Andrea, Santo). Landing page pubblica, autenticazione utenti, prenotazione appuntamenti con calendario a slot, dashboard admin per gestione completa di prenotazioni/servizi/staff/contenuti.
+Webapp di prenotazione online per **Hair Studio**, barbershop maschile con tre operatori fissi. Landing page pubblica, autenticazione utenti, prenotazione appuntamenti con calendario a slot, dashboard admin per gestione completa di prenotazioni/servizi/staff/contenuti.
 
 Il progetto nasce come riscrittura completa di un prototipo Base44 (no-code, backend proprietario): l'obiettivo è uno stack posseduto interamente, senza dipendenze da piattaforme terze per auth e database. Vedi `CLAUDE.md` per il contesto di progetto esteso.
 
@@ -12,7 +12,7 @@ Il progetto nasce come riscrittura completa di un prototipo Base44 (no-code, bac
 - TanStack React Query per data-fetching/cache lato client
 - `react-hook-form` + `zod` per i form
 - Server-Sent Events (via `EventSource`) per gli aggiornamenti in tempo reale
-- Firebase Cloud Messaging (solo SDK client, per le push — vedi sezione dedicata)
+- Firebase Cloud Messaging (SDK client + service worker, per le push — vedi sezione dedicata)
 
 **Backend**
 - Node.js + Express
@@ -22,6 +22,7 @@ Il progetto nasce come riscrittura completa di un prototipo Base44 (no-code, bac
 - `helmet` + `express-rate-limit` per hardening HTTP e rate limiting sugli endpoint sensibili (login, registrazione, reset password)
 - AWS S3 (via `@aws-sdk/client-s3` + presigned URL) per l'upload delle immagini
 - Resend (via `fetch`, nessun SDK) per le email transazionali
+- `firebase-admin` per l'invio delle push (conferma/cancellazione prenotazione, nuove prenotazioni agli admin)
 
 Non ci sono servizi gestiti di terze parti per la logica core (niente Auth0/Firebase Auth/Supabase): database e autenticazione sono interamente sotto controllo del backend.
 

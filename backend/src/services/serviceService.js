@@ -35,6 +35,9 @@ export async function createService(data) {
   return rows[0];
 }
 
+//FOR UPDATE serializza due modifiche concorrenti allo stesso servizio: senza il lock, due
+//richieste potrebbero leggere lo stesso `current` e una delle due varianti di prezzo/durata
+//andrebbe persa nello storico invece di generare la propria riga in service_price_history.
 export async function updateService(id, data, userId) {
   return withTransaction(async (client) => {
     const { rows: currentRows } = await client.query("SELECT * FROM services WHERE id = $1 FOR UPDATE", [id]);

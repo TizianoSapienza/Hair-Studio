@@ -17,3 +17,14 @@ export function minutesToTime(minutes) {
 export function rangesOverlap(startA, endA, startB, endB) {
   return startA < endB && startB < endA;
 }
+
+const MONTHS_IT = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno", "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"];
+
+export function formatDateIT(dateStr) {
+  const [y, m, d] = String(dateStr).split("-").map(Number);
+  return `${d} ${MONTHS_IT[m - 1]} ${y}`;
+}
+
+export function formatTimeShort(timeStr) {
+  return String(timeStr).slice(0, 5);
+}

@@ -1,23 +1,27 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { clientsApi } from "@/api/contentApi";
 import { Button } from "@/components/ui/button";
-import { Users, Mail, Phone, Tag, Loader2, ArrowLeft } from "lucide-react";
+import { Users, Mail, Phone, Tag, ArrowLeft } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import AdminHeader from "@/components/layout/AdminHeader";
 import { formatDateIT } from "@/lib/salonConfig";
 
 export default function ManageClients() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const loadIdRef = useRef(0);
 
   useEffect(() => {
+    const myId = ++loadIdRef.current;
     clientsApi.adminList()
-      .then((res) => setUsers(res.users || []))
-      .catch(() => setUsers([]))
-      .finally(() => setLoading(false));
+      .then((res) => { if (myId === loadIdRef.current) setUsers(res.users || []); })
+      .catch(() => { if (myId === loadIdRef.current) setUsers([]); })
+      .finally(() => { if (myId === loadIdRef.current) setLoading(false); });
   }, []);
 
-  const clients = users.filter((u) => u.role !== "admin");
+  const clients = useMemo(() => users.filter((u) => u.role !== "admin"), [users]);
 
   return (
     <div className="flex min-h-screen flex-col bg-secondary/30">
@@ -30,12 +34,9 @@ export default function ManageClients() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          <LoadingSpinner />
         ) : clients.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center">
-            <Users className="mx-auto h-10 w-10 text-muted-foreground" />
-            <p className="mt-3 font-medium">Nessun cliente</p>
-          </div>
+          <EmptyState icon={Users} title="Nessun cliente" />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
             {clients.map((u) => (

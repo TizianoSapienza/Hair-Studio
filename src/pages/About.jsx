@@ -16,7 +16,7 @@ export default function About() {
         <h1 className="mt-2 font-heading text-4xl font-semibold tracking-tight">Chi siamo</h1>
         <div className="mt-6 space-y-5 leading-relaxed text-foreground/90">
           <p>
-            {content?.aboutChiSiamo || "Hair Studio è il barbershop di riferimento a Mascalucia, in provincia di Catania. Nato dalla passione per il mestiere e per la cura del dettaglio, il salone unisce la tradizione della barberia italiana con uno stile moderno e accogliente. Qui ogni cliente trova un ambiente informale ma professionale, dove prendersi il tempo necessario per ascoltare le esigenze e costruire il look su misura."}
+            {content?.aboutChiSiamo || "Hair Studio è il barbershop di riferimento. Nato dalla passione per il mestiere e per la cura del dettaglio, il salone unisce la tradizione della barberia italiana con uno stile moderno e accogliente. Qui ogni cliente trova un ambiente informale ma professionale, dove prendersi il tempo necessario per ascoltare le esigenze e costruire il look su misura."}
           </p>
           <div className="border-t border-border pt-5">
             <h2 className="font-heading text-xl font-semibold">Come funziona la prenotazione online</h2>
@@ -27,7 +27,7 @@ export default function About() {
           <div className="border-t border-border pt-5">
             <h2 className="font-heading text-xl font-semibold">Il team</h2>
             <p className="mt-2">
-              {content?.aboutTeam || "Il team è composto da tre barbieri esperti — Antonio, Andrea e Santo — che lavorano in parallelo per garantire tempi brevi e qualità alta. Per qualsiasi domanda sull'app o per prenotare un appuntamento, visita la pagina Contatti: siamo felici di accoglierti e aiutarti a trovare il tuo nuovo look."}
+              {content?.aboutTeam || "Il team è composto da tre barbieri esperti che lavorano in parallelo per garantire tempi brevi e qualità alta. Per qualsiasi domanda sull'app o per prenotare un appuntamento, visita la pagina Contatti: siamo felici di accoglierti e aiutarti a trovare il tuo nuovo look."}
             </p>
           </div>
         </div>

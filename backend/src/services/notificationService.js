@@ -1,5 +1,6 @@
 import { pool } from "../db/pool.js";
 import { publishUserNotification } from "./realtimeService.js";
+import { sendPushToUsers } from "./pushService.js";
 
 //Non pubblica sul bus realtime: l'evento va emesso dal chiamante DOPO il commit della
 //transazione (vedi publishNotifications), altrimenti un client riceve via SSE una notifica
@@ -27,6 +28,19 @@ export async function notifyAllAdmins(client, { type, message, bookingId }) {
 export function publishNotifications(notifications) {
   for (const notification of notifications) {
     publishUserNotification(notification.user_id, { type: "notification", notification });
+  }
+
+  //Le notifiche con lo stesso messaggio (es. notifyAllAdmins) condividono un solo invio push
+  //multicast invece di uno per destinatario.
+  const groups = new Map();
+  for (const n of notifications) {
+    if (!groups.has(n.message)) groups.set(n.message, { type: n.type, bookingId: n.booking_id, userIds: [] });
+    groups.get(n.message).userIds.push(n.user_id);
+  }
+  for (const [message, { type, bookingId, userIds }] of groups) {
+    sendPushToUsers(userIds, { type, message, bookingId }).catch((e) =>
+      console.error("[push] errore invio notifica", e)
+    );
   }
 }
 

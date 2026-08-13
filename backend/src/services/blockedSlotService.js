@@ -1,5 +1,5 @@
 import { pool, withTransaction } from "../db/pool.js";
-import { assertBlockDoesNotOverlapBookings } from "./scheduleService.js";
+import { assertBlockDoesNotOverlapBookings, OCCUPYING_STATUSES } from "./scheduleService.js";
 import { publishAdminEvent } from "./realtimeService.js";
 import { rangesOverlap, timeToMinutes } from "../utils/time.js";
 import { conflict, notFound } from "../utils/AppError.js";
@@ -59,7 +59,7 @@ export async function createBlockedSlotsBulk({ staffIds, date, slots, note, crea
       `SELECT staff_id, start_time, duration_minutes
        FROM bookings
        WHERE booking_date = $1 AND staff_id = ANY($2::uuid[]) AND status = ANY($3::booking_status[])`,
-      [date, staffIds, ["in_attesa", "confermata"]]
+      [date, staffIds, OCCUPYING_STATUSES]
     );
     const { rows: blockedRows } = await client.query(
       `SELECT staff_id, start_time, end_time

@@ -38,7 +38,7 @@ export default function ServicesSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-60px" }}
               transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.5, delay: (i % 3) * 0.08 }}
-              className="group rounded-2xl border border-border bg-card p-6 transition-all hover:-translate-y-1 hover:border-primary/50 hover:shadow-lg"
+              className="group rounded-2xl border border-border bg-card p-6 transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-1 hover:border-primary/50 hover:shadow-lg"
             >
               <div className="flex items-start justify-between">
                 <h3 className="font-heading text-lg font-semibold">{s.name}</h3>

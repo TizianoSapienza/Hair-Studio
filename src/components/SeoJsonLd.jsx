@@ -4,7 +4,7 @@ import useBusinessInfo from "@/hooks/useBusinessInfo";
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
-export default function SeoJsonLd({ title, description }) {
+export default function SeoJsonLd({ description }) {
   const { data: info } = useBusinessInfo();
 
   useEffect(() => {
@@ -29,13 +29,13 @@ export default function SeoJsonLd({ title, description }) {
           "@context": "https://schema.org",
           "@type": "HairSalon",
           "name": name,
-          "address": {
-            "@type": "PostalAddress",
-            "streetAddress": address,
-            "addressLocality": "Mascalucia",
-            "addressRegion": "CT",
-            "addressCountry": "IT",
-          },
+          ...(address && {
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": address,
+              "addressCountry": "IT",
+            },
+          }),
           "telephone": phone,
           "openingHoursSpecification": specs,
         };
@@ -49,14 +49,18 @@ export default function SeoJsonLd({ title, description }) {
       }
     })();
 
-    if (title) document.title = title;
     let metaDesc = null;
+    let createdMeta = false;
+    let previousContent = null;
     if (description) {
       metaDesc = document.querySelector('meta[name="description"]');
       if (!metaDesc) {
         metaDesc = document.createElement("meta");
         metaDesc.name = "description";
         document.head.appendChild(metaDesc);
+        createdMeta = true;
+      } else {
+        previousContent = metaDesc.content;
       }
       metaDesc.content = description;
     }
@@ -64,8 +68,14 @@ export default function SeoJsonLd({ title, description }) {
     return () => {
       cancelled = true;
       if (scriptEl && scriptEl.parentNode) scriptEl.parentNode.removeChild(scriptEl);
+      //Senza questo, il meta description di una pagina resta in <head> quando si naviga
+      //verso una pagina che non passa `description` (o non renderizza SeoJsonLd affatto).
+      if (metaDesc) {
+        if (createdMeta) metaDesc.parentNode?.removeChild(metaDesc);
+        else metaDesc.content = previousContent || "";
+      }
     };
-  }, [info, title, description]);
+  }, [info, description]);
 
   return null;
 }

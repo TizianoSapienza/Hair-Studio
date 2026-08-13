@@ -85,9 +85,9 @@ export default function VerifyEmail() {
         {resent ? (
           <p className="text-muted-foreground">Se l'account esiste, un nuovo codice è in arrivo.</p>
         ) : (
-          <button type="button" onClick={handleResend} disabled={resending} className="text-primary font-medium hover:underline disabled:opacity-60">
+          <Button type="button" variant="link" onClick={handleResend} disabled={resending} className="h-auto p-0 font-medium disabled:opacity-60">
             {resending ? "Invio in corso..." : "Invia di nuovo il codice"}
-          </button>
+          </Button>
         )}
       </div>
     </AuthLayout>

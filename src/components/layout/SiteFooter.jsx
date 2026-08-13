@@ -1,5 +1,5 @@
 import React from "react";
-import { MapPin, Phone, Instagram, Facebook } from "lucide-react";
+import { MapPin, Instagram, Facebook } from "lucide-react";
 import { Link } from "react-router-dom";
 import { SALON } from "@/lib/salonConfig";
 import { safeHref } from "@/lib/safeUrl";
@@ -13,7 +13,7 @@ export default function SiteFooter() {
   const name = info?.businessName || SALON.name;
   const phone = info?.phone || SALON.phone;
   const facebookUrl = safeHref(info?.facebookUrl);
-  const instagram = safeHref(info?.instagramUrl || SALON.instagram);
+  const instagram = safeHref(info?.instagramUrl);
   const googleMapsUrl = safeHref(info?.googleMapsUrl);
   const description = home?.footerDescription || SALON.tagline;
 
@@ -53,9 +53,9 @@ export default function SiteFooter() {
         <div>
           <h4 className="text-sm font-semibold text-foreground">Naviga</h4>
           <ul className="mt-3 space-y-2 text-sm">
-            <li><a href="/#servizi" className="text-muted-foreground hover:text-foreground">Servizi</a></li>
+            <li><Link to="/#servizi" className="text-muted-foreground hover:text-foreground">Servizi</Link></li>
             <li><Link to="/about" className="text-muted-foreground hover:text-foreground">Chi siamo</Link></li>
-            <li><a href="/#galleria" className="text-muted-foreground hover:text-foreground">Galleria</a></li>
+            <li><Link to="/#galleria" className="text-muted-foreground hover:text-foreground">Galleria</Link></li>
             <li><Link to="/contact" className="text-muted-foreground hover:text-foreground">Contatti</Link></li>
           </ul>
         </div>
