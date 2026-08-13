@@ -1,6 +1,8 @@
 import pg from "pg";
 import { env } from "../config/env.js";
 
+pg.types.setTypeParser(pg.types.builtins.DATE, (value) => value);
+
 export const pool = new pg.Pool({
   connectionString: env.databaseUrl,
 });
