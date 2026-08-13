@@ -3,6 +3,7 @@ import { scheduleApi } from "@/api/scheduleApi";
 import { bookingsApi, blockedSlotsApi } from "@/api/bookingsApi";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -298,29 +299,29 @@ export default function CalendarView({
         </div>
         <div className="flex w-full flex-wrap items-center gap-2">
           {pending && (
-            <span className="status-badge-in inline-flex items-center rounded-full bg-warning-soft px-2.5 py-1 text-xs font-medium text-warning-soft-foreground">
+            <Badge variant="warning" className="status-badge-in">
               <Clock className="mr-1 h-3.5 w-3.5" /> In attesa
-            </span>
+            </Badge>
           )}
           {confirmed && (
-            <span className="status-badge-in inline-flex items-center rounded-full bg-info-soft px-2.5 py-1 text-xs font-medium text-info-soft-foreground">
+            <Badge variant="info" className="status-badge-in">
               <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Confermata
-            </span>
+            </Badge>
           )}
           {completed && (
-            <span className="status-badge-in inline-flex items-center rounded-full bg-success-soft px-2.5 py-1 text-xs font-medium text-success-soft-foreground">
+            <Badge variant="success" className="status-badge-in">
               <Check className="mr-1 h-3.5 w-3.5" /> Completato
-            </span>
+            </Badge>
           )}
           {cancelled && (
-            <span className="status-badge-in inline-flex items-center rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+            <Badge variant="muted" className="status-badge-in">
               <Ban className="mr-1 h-3.5 w-3.5" /> Cancellata
-            </span>
+            </Badge>
           )}
           {noShow && (
-            <span className="status-badge-in inline-flex items-center rounded-full bg-destructive-soft px-2.5 py-1 text-xs font-medium text-destructive-soft-foreground">
+            <Badge variant="destructiveSoft" className="status-badge-in">
               <UserX className="mr-1 h-3.5 w-3.5" /> No-show
-            </span>
+            </Badge>
           )}
           {(pending || confirmed || blockActive || isBlock) && (
             <div className="grid w-full grid-cols-2 gap-2">
@@ -532,7 +533,7 @@ export default function CalendarView({
               <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-warning" /> In parte</span>
               <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-destructive" /> Occupato</span>
             </div>
-            {!readOnly && blockableSlots.length > 0 && (
+            {mode === "admin" && !readOnly && blockableSlots.length > 0 && (
                   <div className="mt-4">
                     <div className="flex items-center justify-between">
                       <p className="text-xs text-muted-foreground">Seleziona gli slot da bloccare:</p>

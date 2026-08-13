@@ -22,6 +22,8 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       setUser(null);
       setIsAuthenticated(false);
+      //401 è l'esito normale per un visitatore non loggato, non un errore da segnalare —
+      //solo un fallimento diverso (rete, 500) deve popolare authError.
       if (error.status && error.status !== 401) {
         setAuthError({ type: 'unknown', message: error.message });
       }

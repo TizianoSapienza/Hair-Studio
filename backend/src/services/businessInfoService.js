@@ -1,5 +1,7 @@
 import { pool } from "../db/pool.js";
 
+//business_info è una tabella singleton: esiste sempre e solo la riga id=1 (dati anagrafici
+//dell'attività, un solo salone), niente relazione con altre entità da id qui.
 export async function getBusinessInfo() {
   const { rows } = await pool.query("SELECT * FROM business_info WHERE id = 1");
   return rows[0] || null;

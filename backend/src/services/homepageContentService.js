@@ -27,6 +27,9 @@ export async function getHomepageContent() {
   return rows[0] || null;
 }
 
+//Upsert costruito dinamicamente da FIELDS (singleton id=1, come business_info) invece di un
+//INSERT/UPDATE scritto a mano: un nuovo campo homepage si aggiunge solo qui, non in tre punti
+//(colonne, placeholder, updateSet) da tenere manualmente sincronizzati.
 export async function upsertHomepageContent(data) {
   const values = FIELDS.map((snakeField) => {
     const camelField = snakeField.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());

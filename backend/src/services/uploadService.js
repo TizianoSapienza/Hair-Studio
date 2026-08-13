@@ -18,6 +18,8 @@ export async function createPresignedUpload({ folder, contentType, extension }) 
     Key: key,
     ContentType: contentType,
   });
+  //60s bastano al browser per avviare il PUT subito dopo aver ricevuto l'URL: più breve è la
+  //finestra di validità, minore il rischio che l'URL firmato venga intercettato e riusato.
   const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 60 });
   const publicUrl = `https://${env.s3.bucket}.s3.${env.s3.region}.amazonaws.com/${key}`;
   return { uploadUrl, publicUrl };

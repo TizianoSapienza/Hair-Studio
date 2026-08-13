@@ -56,7 +56,7 @@ function App() {
       <QueryClientProvider client={queryClientInstance}>
         <TooltipProvider delayDuration={400} skipDelayDuration={200}>
         <ErrorBoundary>
-        <Router>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <ScrollToTop />
           <PullToRefresh onRefresh={handleRefresh}>
           <Suspense fallback={<RouteSkeleton />}>
