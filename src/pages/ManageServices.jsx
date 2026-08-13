@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { servicesApi } from "@/api/catalogApi";
@@ -11,9 +11,12 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Switch } from "@/components/ui/switch";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { Plus, Pencil, Trash2, Loader2, Scissors, ArrowLeft, GripVertical, History } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import AdminHeader from "@/components/layout/AdminHeader";
 import { toast } from "sonner";
 import { extractError } from "@/lib/apiError";
+import { useDragReorder } from "@/hooks/useDragReorder";
 
 const EMPTY = { name: "", description: "", durationMinutes: 30, price: 10, active: true };
 
@@ -27,19 +30,20 @@ export default function ManageServices() {
   const [saving, setSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
-  const [reordering, setReordering] = useState(false);
   const [history, setHistory] = useState(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const loadIdRef = useRef(0);
 
   const load = useCallback(async () => {
+    const myId = ++loadIdRef.current;
     setLoading(true);
     try {
       const res = await servicesApi.adminList();
-      setServices(res.services || []);
+      if (myId === loadIdRef.current) setServices(res.services || []);
     } catch {
-      setServices([]);
+      if (myId === loadIdRef.current) setServices([]);
     } finally {
-      setLoading(false);
+      if (myId === loadIdRef.current) setLoading(false);
     }
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -84,23 +88,12 @@ export default function ManageServices() {
     }
   };
 
-  const onDragEnd = async (result) => {
-    if (!result.destination || result.source.index === result.destination.index) return;
-    const reordered = Array.from(services);
-    const [moved] = reordered.splice(result.source.index, 1);
-    reordered.splice(result.destination.index, 0, moved);
-    setServices(reordered);
-    setReordering(true);
-    try {
-      await servicesApi.adminReorder(reordered.map((s) => s.id));
-      queryClient.invalidateQueries({ queryKey: ["site_data"] });
-    } catch (err) {
-      toast.error("Errore nel riordino", { description: extractError(err) });
-      await load();
-    } finally {
-      setReordering(false);
-    }
-  };
+  const { reordering, onDragEnd } = useDragReorder({
+    items: services,
+    setItems: setServices,
+    reorderFn: servicesApi.adminReorder,
+    reload: load,
+  });
 
   const toggleActive = async (s) => {
     const next = s.active === false ? true : false;
@@ -166,12 +159,9 @@ export default function ManageServices() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          <LoadingSpinner />
         ) : services.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center">
-            <Scissors className="mx-auto h-10 w-10 text-muted-foreground" />
-            <p className="mt-3 font-medium">Nessun servizio</p>
-          </div>
+          <EmptyState icon={Scissors} title="Nessun servizio" />
         ) : (
           <div className="overflow-x-auto rounded-2xl border border-border bg-card">
             <DragDropContext onDragEnd={onDragEnd}>

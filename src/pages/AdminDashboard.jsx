@@ -8,12 +8,10 @@ import AdminHeader from "@/components/layout/AdminHeader";
 import { Skeleton } from "@/components/ui/skeleton";
 import CalendarView from "@/components/booking/CalendarView";
 import { useAdminEvents } from "@/hooks/useAdminEvents";
-import { toDateString } from "@/lib/dateUtils";
+import { toDateString, todayMidnight } from "@/lib/dateUtils";
 
 export default function AdminDashboard() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const [date, setDate] = useState(today);
+  const [date, setDate] = useState(todayMidnight());
   const [refreshKey, setRefreshKey] = useState(0);
   const [stats, setStats] = useState({ today: 0, completedMonth: 0, noShowMonth: 0 });
   const [loadingStats, setLoadingStats] = useState(true);
@@ -28,9 +26,8 @@ export default function AdminDashboard() {
       const selDateStr = toDateString(debouncedDate);
       const year = debouncedDate.getFullYear();
       const month = debouncedDate.getMonth();
-      const monthStart = `${year}-${String(month + 1).padStart(2, "0")}-01`;
-      const lastDay = new Date(year, month + 1, 0).getDate();
-      const monthEnd = `${year}-${String(month + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+      const monthStart = toDateString(new Date(year, month, 1));
+      const monthEnd = toDateString(new Date(year, month + 1, 0));
 
       const [dayBookings, monthStats] = await Promise.all([
         bookingsApi.adminList({ date: selDateStr }),

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { homepageContentApi } from "@/api/contentApi";
@@ -52,12 +52,14 @@ export default function ManageHomeContent() {
   const [form, setForm] = useState({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const loadIdRef = useRef(0);
 
   useEffect(() => {
+    const myId = ++loadIdRef.current;
     homepageContentApi.adminGet()
-      .then((res) => setForm(res?.homepageContent || {}))
+      .then((res) => { if (myId === loadIdRef.current) setForm(res?.homepageContent || {}); })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => { if (myId === loadIdRef.current) setLoading(false); });
   }, []);
 
   const update = (k, v) => setForm((f) => ({ ...f, [k]: v }));

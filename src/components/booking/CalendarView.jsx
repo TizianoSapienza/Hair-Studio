@@ -10,8 +10,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { ChevronLeft, ChevronRight, Loader2, Ban, Lock, Check, CheckCircle2, Users, CalendarDays, Clock, RefreshCw, UserX, Scissors, Trash2 } from "lucide-react";
 import { formatDateIT, DAY_LABELS_LONG, timeToMinutes, minutesToTime } from "@/lib/salonConfig";
-import { toDateString } from "@/lib/dateUtils";
+import { toDateString, todayMidnight } from "@/lib/dateUtils";
 import { extractError } from "@/lib/apiError";
+import { isCancellableBooking } from "@/lib/bookingStatus";
 import { useCalendarData } from "@/hooks/useCalendarData";
 import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -24,16 +25,10 @@ function addDays(date, n) {
   return d;
 }
 function isPast(dateStr) {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return new Date(dateStr + "T00:00:00") < today;
+  return new Date(dateStr + "T00:00:00") < todayMidnight();
 }
 function isToday(dateStr) {
-  const t = new Date();
-  const y = t.getFullYear();
-  const m = String(t.getMonth() + 1).padStart(2, "0");
-  const d = String(t.getDate()).padStart(2, "0");
-  return dateStr === `${y}-${m}-${d}`;
+  return dateStr === toDateString(new Date());
 }
 function nowTimeStr() {
   const d = new Date();
@@ -215,7 +210,7 @@ export default function CalendarView({
         if (kind === "confirm" && b.status === "in_attesa") return bookingsApi.adminConfirm(b.id);
         if (kind === "complete" && b.status === "confermata") return bookingsApi.adminComplete(b.id);
         if (kind === "no_show" && b.status === "confermata") return bookingsApi.adminNoShow(b.id);
-        if (kind === "delete" && ["in_attesa", "confermata"].includes(b.status)) return bookingsApi.adminCancel(b.id);
+        if (kind === "delete" && isCancellableBooking(b.status)) return bookingsApi.adminCancel(b.id);
         return null;
       })
       .filter(Boolean);
@@ -247,8 +242,6 @@ export default function CalendarView({
     () => (slotModal ? visibleBookings.filter((b) => timeToMinutes(b.startTime) === timeToMinutes(slotModal)) : []),
     [slotModal, visibleBookings]
   );
-  const todayMidnight = new Date();
-  todayMidnight.setHours(0, 0, 0, 0);
   const blockTimes = Array.from(blockSelection).sort();
 
   const blockableSlots = useMemo(
@@ -398,7 +391,7 @@ export default function CalendarView({
                   <Calendar
                     mode="single" weekStartsOn={1} month={pickerMonth} onMonthChange={setPickerMonth}
                     selected={date} onSelect={(d) => { if (d) { onDateChange(d); setDatePickerOpen(false); } }}
-                    disabled={mode === "booking" ? (d) => d < todayMidnight : undefined}
+                    disabled={mode === "booking" ? (d) => d < todayMidnight() : undefined}
                     modifiers={{ closed: (d) => isClosedDay(toDateString(d), meta.openingHours, meta.closures) }}
                     modifiersClassNames={{ closed: "bg-destructive-soft text-destructive-soft-foreground line-through" }}
                     classNames={{ day_today: "" }} initialFocus />
@@ -417,7 +410,7 @@ export default function CalendarView({
                 <Calendar
                   mode="single" weekStartsOn={1} month={pickerMonth} onMonthChange={setPickerMonth}
                   selected={date} onSelect={(d) => { if (d) { onDateChange(d); setDatePickerOpen(false); } }}
-                  disabled={mode === "booking" ? (d) => d < todayMidnight : undefined}
+                  disabled={mode === "booking" ? (d) => d < todayMidnight() : undefined}
                   modifiers={{ closed: (d) => isClosedDay(toDateString(d), meta.openingHours, meta.closures) }}
                   modifiersClassNames={{ closed: "bg-destructive-soft text-destructive-soft-foreground line-through" }}
                   classNames={{ day_today: "" }} initialFocus />

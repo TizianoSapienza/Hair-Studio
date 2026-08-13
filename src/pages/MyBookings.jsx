@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarDays, Ban, Loader2, Scissors, Clock, AlertTriangle } from "lucide-react";
 import SiteHeader from "@/components/layout/SiteHeader";
+import { EmptyState } from "@/components/ui/empty-state";
 import { toast } from "sonner";
 import { formatDateIT } from "@/lib/salonConfig";
 import { useSse } from "@/hooks/useSse";
+import { isCancellableBooking } from "@/lib/bookingStatus";
 
 export default function MyBookings() {
   const queryClient = useQueryClient();
@@ -78,12 +80,9 @@ export default function MyBookings() {
               <Button variant="outline" className="mt-5" onClick={() => refetch()}>Riprova</Button>
             </div>
           ) : upcoming.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center">
-              <Scissors className="mx-auto h-10 w-10 text-muted-foreground" />
-              <p className="mt-3 font-medium">Nessuna prenotazione</p>
-              <p className="text-sm text-muted-foreground">Prenota il tuo prossimo appuntamento.</p>
+            <EmptyState icon={Scissors} title="Nessuna prenotazione" description="Prenota il tuo prossimo appuntamento.">
               <Button asChild className="mt-5"><Link to="/prenota">Prenota ora</Link></Button>
-            </div>
+            </EmptyState>
           ) : (
             <ul className="space-y-3">
               {upcoming.map((b) => (
@@ -109,7 +108,7 @@ export default function MyBookings() {
                     {b.status === "completata" && (
                       <span className="inline-flex items-center rounded-full bg-success-soft px-3 py-1.5 text-xs font-medium text-success-soft-foreground">Completato</span>
                     )}
-                    {b.status !== "completata" && (
+                    {isCancellableBooking(b.status) && (
                       <Button variant="outline" onClick={() => cancelMutation.mutate(b.id)} disabled={cancelMutation.isPending && cancelMutation.variables === b.id}>
                         {cancelMutation.isPending && cancelMutation.variables === b.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Ban className="mr-2 h-4 w-4" />}
                         Cancella

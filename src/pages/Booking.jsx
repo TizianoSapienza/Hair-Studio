@@ -12,16 +12,14 @@ import CalendarView from "@/components/booking/CalendarView";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "sonner";
 import { formatDateIT } from "@/lib/salonConfig";
-import { toDateString } from "@/lib/dateUtils";
+import { toDateString, todayMidnight } from "@/lib/dateUtils";
 import { formatDuration } from "@/lib/format";
 import { extractError } from "@/lib/apiError";
 import useServices from "@/hooks/useServices";
 
 export default function Booking() {
   const { user } = useAuth();
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const [date, setDate] = useState(today);
+  const [date, setDate] = useState(todayMidnight());
   const [selectedService, setSelectedService] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [selectedStaff, setSelectedStaff] = useState("any");

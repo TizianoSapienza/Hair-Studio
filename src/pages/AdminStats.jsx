@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { bookingsApi } from "@/api/bookingsApi";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Loader2, GitCompare, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowLeft, GitCompare, ChevronLeft, ChevronRight } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import AdminHeader from "@/components/layout/AdminHeader";
 import StatsCompare from "@/components/admin/StatsCompare";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -16,8 +17,6 @@ const UNITS = [
   { id: "month", label: "Mese" },
   { id: "year", label: "Anno" },
 ];
-
-function pad(n) { return String(n).padStart(2, "0"); }
 
 function isoWeekNumber(d) {
   const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -45,10 +44,9 @@ function rangeFor(unit, value, year) {
     return { from: toDateString(tue), to: toDateString(sat) };
   }
   if (unit === "month") {
-    const last = new Date(year, value, 0).getDate();
-    return { from: `${year}-${pad(value)}-01`, to: `${year}-${pad(value)}-${pad(last)}` };
+    return { from: toDateString(new Date(year, value - 1, 1)), to: toDateString(new Date(year, value, 0)) };
   }
-  return { from: `${year}-01-01`, to: `${year}-12-31` };
+  return { from: toDateString(new Date(year, 0, 1)), to: toDateString(new Date(year, 11, 31)) };
 }
 
 const MONTH_SHORT = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"];
@@ -226,7 +224,7 @@ export default function AdminStats() {
           </div>
         ) : null}
         {loading && !dataA ? (
-          <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          <LoadingSpinner />
         ) : !dataA ? (
           <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center text-sm text-muted-foreground">Impossibile caricare le statistiche.</div>
         ) : (
