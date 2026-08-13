@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { CalendarDays } from "lucide-react";
@@ -6,11 +6,19 @@ import { motion, useReducedMotion } from "framer-motion";
 import useHomepageContent from "@/hooks/useHomepageContent";
 import { useAuth } from "@/lib/AuthContext";
 
+const FALLBACK_HERO_IMAGE = "/img/hero.png";
+
 export default function Hero() {
   const { isAuthenticated, user } = useAuth();
   const isAdmin = isAuthenticated && user?.role === "admin";
   const { data: content } = useHomepageContent();
   const shouldReduceMotion = useReducedMotion();
+  const heroImageUrl = content?.heroImageUrl || FALLBACK_HERO_IMAGE;
+  //Se l'URL impostato dall'admin smette di funzionare (es. immagine rimossa da S3), l'errore
+  //di caricamento fa ripiegare sull'immagine locale invece di lasciare l'icona rotta a
+  //tutto schermo.
+  const [imgSrc, setImgSrc] = useState(heroImageUrl);
+  useEffect(() => { setImgSrc(heroImageUrl); }, [heroImageUrl]);
 
   return (
     <section className="relative overflow-hidden min-h-[90vh] sm:min-h-screen flex items-center justify-center">
@@ -22,9 +30,10 @@ export default function Hero() {
         transition={shouldReduceMotion ? { duration: 0 } : { duration: 1.6, ease: [0.22, 1, 0.36, 1] }}
       >
         <img
-          src={content?.heroImageUrl || "/img/hero.png"}
+          src={imgSrc}
           alt="Interno del salone"
           className="h-full w-full object-cover object-center"
+          onError={() => { if (imgSrc !== FALLBACK_HERO_IMAGE) setImgSrc(FALLBACK_HERO_IMAGE); }}
         />
         {/* Overlay gradient scuro per garantire leggibilità del testo */}
         <div className="absolute inset-0 bg-gradient-to-br from-black/85 via-black/60 to-brand/75" />

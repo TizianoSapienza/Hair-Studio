@@ -1,18 +1,8 @@
 import React from "react";
 import { MapPin, Phone, Mail, Clock } from "lucide-react";
-import { SALON } from "@/lib/salonConfig";
+import { SALON, DEFAULT_ORARI } from "@/lib/salonConfig";
 import useBusinessInfo from "@/hooks/useBusinessInfo";
 import Reveal from "./Reveal";
-
-const DEFAULT_ORARI = [
-  { giorno: "Lunedì", orario: "", chiuso: true },
-  { giorno: "Martedì", orario: "8:30 – 19:30", chiuso: false },
-  { giorno: "Mercoledì", orario: "8:30 – 19:30", chiuso: false },
-  { giorno: "Giovedì", orario: "8:30 – 19:30", chiuso: false },
-  { giorno: "Venerdì", orario: "8:30 – 19:30", chiuso: false },
-  { giorno: "Sabato", orario: "8:30 – 19:30", chiuso: false },
-  { giorno: "Domenica", orario: "", chiuso: true },
-];
 
 export default function ContactSection() {
   const { data: info } = useBusinessInfo();

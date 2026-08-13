@@ -42,8 +42,8 @@ export default function AboutSection() {
             </Button>
           </div>
           <div className="mt-8 grid divide-y divide-border border-t border-border sm:grid-cols-3 sm:divide-x sm:divide-y-0 sm:border-t-0">
-            {STATS.map((s) => (
-              <div key={s.label} className="py-4 first:pt-0 sm:px-5 sm:py-0 sm:first:pl-0 sm:first:pt-0">
+            {STATS.map((s, i) => (
+              <div key={i} className="py-4 first:pt-0 sm:px-5 sm:py-0 sm:first:pl-0 sm:first:pt-0">
                 <s.icon className="h-6 w-6 text-primary" />
                 <p className="mt-3 font-heading text-base font-semibold">{s.label}</p>
                 <p className="text-sm text-muted-foreground">{s.desc}</p>

@@ -53,9 +53,9 @@ export default function SiteFooter() {
         <div>
           <h4 className="text-sm font-semibold text-foreground">Naviga</h4>
           <ul className="mt-3 space-y-2 text-sm">
-            <li><a href="/#servizi" className="text-muted-foreground hover:text-foreground">Servizi</a></li>
+            <li><Link to="/#servizi" className="text-muted-foreground hover:text-foreground">Servizi</Link></li>
             <li><Link to="/about" className="text-muted-foreground hover:text-foreground">Chi siamo</Link></li>
-            <li><a href="/#galleria" className="text-muted-foreground hover:text-foreground">Galleria</a></li>
+            <li><Link to="/#galleria" className="text-muted-foreground hover:text-foreground">Galleria</Link></li>
             <li><Link to="/contact" className="text-muted-foreground hover:text-foreground">Contatti</Link></li>
           </ul>
         </div>

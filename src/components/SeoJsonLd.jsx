@@ -50,12 +50,17 @@ export default function SeoJsonLd({ description }) {
     })();
 
     let metaDesc = null;
+    let createdMeta = false;
+    let previousContent = null;
     if (description) {
       metaDesc = document.querySelector('meta[name="description"]');
       if (!metaDesc) {
         metaDesc = document.createElement("meta");
         metaDesc.name = "description";
         document.head.appendChild(metaDesc);
+        createdMeta = true;
+      } else {
+        previousContent = metaDesc.content;
       }
       metaDesc.content = description;
     }
@@ -63,6 +68,12 @@ export default function SeoJsonLd({ description }) {
     return () => {
       cancelled = true;
       if (scriptEl && scriptEl.parentNode) scriptEl.parentNode.removeChild(scriptEl);
+      //Senza questo, il meta description di una pagina resta in <head> quando si naviga
+      //verso una pagina che non passa `description` (o non renderizza SeoJsonLd affatto).
+      if (metaDesc) {
+        if (createdMeta) metaDesc.parentNode?.removeChild(metaDesc);
+        else metaDesc.content = previousContent || "";
+      }
     };
   }, [info, description]);
 

@@ -97,7 +97,13 @@ export default function EmployeesSection() {
     return () => controls.stop();
   }, [transit]);
 
-  const settle = () => animate(x, -width, { duration: 0.3, ease: "easeOut" });
+  //Deve settare `locked` come commit()/jumpTo(): altrimenti un drag sotto soglia può
+  //accavallarsi con l'autoplay (o un click sulle frecce) che parte a metà dell'animazione
+  //di rientro, interrompendola bruscamente.
+  const settle = () => {
+    setLocked(true);
+    animate(x, -width, { duration: 0.3, ease: "easeOut", onComplete: () => setLocked(false) });
+  };
 
   const handleDragEnd = (_e, info) => {
     if (locked) return;

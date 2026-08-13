@@ -11,6 +11,7 @@ import { ArrowLeft, Loader2, Save } from "lucide-react";
 import AdminHeader from "@/components/layout/AdminHeader";
 import { toast } from "sonner";
 import { ImageUploadField } from "@/components/admin/ImageUploadField";
+import { DEFAULT_ORARI } from "@/lib/salonConfig";
 
 const URL_FIELDS = [
   ["instagramUrl", "Instagram"],
@@ -28,16 +29,6 @@ function isValidUrl(value) {
     return false;
   }
 }
-
-const DEFAULT_ORARI = [
-  { giorno: "Lunedì", orario: "", chiuso: true },
-  { giorno: "Martedì", orario: "8:30 – 19:30", chiuso: false },
-  { giorno: "Mercoledì", orario: "8:30 – 19:30", chiuso: false },
-  { giorno: "Giovedì", orario: "8:30 – 19:30", chiuso: false },
-  { giorno: "Venerdì", orario: "8:30 – 19:30", chiuso: false },
-  { giorno: "Sabato", orario: "8:30 – 19:30", chiuso: false },
-  { giorno: "Domenica", orario: "", chiuso: true },
-];
 
 const EMPTY = {
   businessName: "Hair Studio",
@@ -102,7 +93,7 @@ export default function AdminSettings() {
     }));
 
   const validate = () => {
-    if (!form.businessName || !form.address || !form.phone) {
+    if (!form.businessName?.trim() || !form.address?.trim() || !form.phone?.trim()) {
       toast.error("Compila nome attività, indirizzo e telefono");
       return false;
     }
@@ -112,6 +103,11 @@ export default function AdminSettings() {
         toast.error(`Link "${label}" non valido`, { description: "Deve essere un URL completo, es. https://..." });
         return false;
       }
+    }
+    const openDay = form.openingHoursDisplay.find((row) => !row.chiuso && !row.orario?.trim());
+    if (openDay) {
+      toast.error(`Orario mancante per ${openDay.giorno}`, { description: "Inserisci l'orario o spunta \"Chiuso\"." });
+      return false;
     }
     return true;
   };
@@ -125,10 +121,12 @@ export default function AdminSettings() {
   const handleConfirmSave = async () => {
     setConfirmOpen(false);
     setSaving(true);
+    const payload = { ...form, businessName: form.businessName.trim(), address: form.address.trim(), phone: form.phone.trim() };
     try {
-      await businessInfoApi.adminUpdate(form);
+      await businessInfoApi.adminUpdate(payload);
       queryClient.invalidateQueries({ queryKey: ["site_data"] });
-      setSavedForm(form);
+      setSavedForm(payload);
+      setForm(payload);
       toast.success("Impostazioni salvate");
     } catch (err) {
       console.error(err);

@@ -19,6 +19,18 @@ export const DAY_LABELS_LONG = [
   "Sabato",
 ];
 
+//Fallback usato sia da AdminSettings (form di modifica) sia da ContactSection (vista pubblica)
+//finché business_info.openingHoursDisplay non è ancora stato configurato da admin.
+export const DEFAULT_ORARI = [
+  { giorno: "Lunedì", orario: "", chiuso: true },
+  { giorno: "Martedì", orario: "8:30 – 19:30", chiuso: false },
+  { giorno: "Mercoledì", orario: "8:30 – 19:30", chiuso: false },
+  { giorno: "Giovedì", orario: "8:30 – 19:30", chiuso: false },
+  { giorno: "Venerdì", orario: "8:30 – 19:30", chiuso: false },
+  { giorno: "Sabato", orario: "8:30 – 19:30", chiuso: false },
+  { giorno: "Domenica", orario: "", chiuso: true },
+];
+
 export function timeToMinutes(t) {
   if (!t || typeof t !== "string") return 0;
   const [h, m] = t.split(":").map(Number);

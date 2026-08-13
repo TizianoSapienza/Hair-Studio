@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { servicesApi } from "@/api/catalogApi";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import { extractError } from "@/lib/apiError";
 const EMPTY = { name: "", description: "", durationMinutes: 30, price: 10, active: true };
 
 export default function ManageServices() {
+  const queryClient = useQueryClient();
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -51,6 +53,10 @@ export default function ManageServices() {
       toast.error("Compila nome, durata e prezzo");
       return;
     }
+    if (Number(form.durationMinutes) % 30 !== 0) {
+      toast.error("Durata non valida", { description: "Deve essere un multiplo di 30 minuti." });
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
@@ -68,6 +74,7 @@ export default function ManageServices() {
         await servicesApi.adminCreate({ ...payload, active: true, displayOrder });
         toast.success("Servizio creato");
       }
+      queryClient.invalidateQueries({ queryKey: ["site_data"] });
       setOpen(false);
       await load();
     } catch (err) {
@@ -86,6 +93,7 @@ export default function ManageServices() {
     setReordering(true);
     try {
       await servicesApi.adminReorder(reordered.map((s) => s.id));
+      queryClient.invalidateQueries({ queryKey: ["site_data"] });
     } catch (err) {
       toast.error("Errore nel riordino", { description: extractError(err) });
       await load();
@@ -100,6 +108,7 @@ export default function ManageServices() {
     setServices((cur) => cur.map((x) => (x.id === s.id ? { ...x, active: next } : x)));
     try {
       await servicesApi.adminUpdate(s.id, { active: next });
+      queryClient.invalidateQueries({ queryKey: ["site_data"] });
     } catch (err) {
       setServices((cur) => cur.map((x) => (x.id === s.id ? { ...x, active: prev } : x)));
       toast.error("Errore", { description: extractError(err) });
@@ -111,6 +120,7 @@ export default function ManageServices() {
     setDeleting(true);
     try {
       await servicesApi.adminDelete(deleteTarget.id);
+      queryClient.invalidateQueries({ queryKey: ["site_data"] });
       toast.success("Servizio eliminato");
       setDeleteTarget(null);
       await load();
@@ -238,7 +248,7 @@ export default function ManageServices() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="dur">Durata (min)</Label>
-                <Input id="dur" type="number" min={15} step={15} value={form.durationMinutes} onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })} required />
+                <Input id="dur" type="number" min={30} step={30} value={form.durationMinutes} onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })} required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="price">Prezzo (€)</Label>

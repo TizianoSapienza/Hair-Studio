@@ -75,6 +75,7 @@ export default function ManageStaff() {
     setReordering(true);
     try {
       await staffApi.adminReorder(reordered.map((s) => s.id));
+      queryClient.invalidateQueries({ queryKey: ["site_data"] });
     } catch (err) {
       toast.error("Errore nel riordino", { description: extractError(err) });
       await load();
