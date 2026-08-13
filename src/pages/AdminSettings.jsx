@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ArrowLeft, Loader2, Save } from "lucide-react";
 import AdminHeader from "@/components/layout/AdminHeader";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { toast } from "sonner";
 import { ImageUploadField } from "@/components/admin/ImageUploadField";
 import { DEFAULT_ORARI } from "@/lib/salonConfig";
@@ -149,7 +150,7 @@ export default function AdminSettings() {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          <LoadingSpinner className="py-20" />
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-4 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0 lg:items-start">

@@ -8,8 +8,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { UserPlus, Mail, Lock, User, Phone, Loader2, Eye, EyeOff, Check, X } from "lucide-react";
 import AuthLayout from "@/components/AuthLayout";
 import { safeReturnTo } from "@/lib/authReturnTo";
-import { PASSWORD_REGEX } from "@/lib/passwordRules";
-import { normalizePhoneDigits, PHONE_DIGITS_REGEX } from "@/lib/phone";
+import { PASSWORD_REGEX, checkPasswordRules } from "@/lib/passwordRules";
+import { normalizePhoneDigits, PHONE_DIGITS_REGEX, DEFAULT_COUNTRY_CODE } from "@/lib/phone";
 
 const CountryCodeSelect = React.lazy(() => import("@/components/profile/CountryCodeSelect"));
 
@@ -26,7 +26,7 @@ export default function Register() {
   const { register } = useAuth();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [code, setCode] = useState("+39");
+  const [code, setCode] = useState(DEFAULT_COUNTRY_CODE);
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,12 +36,7 @@ export default function Register() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const reqs = {
-    len: password.length >= 8,
-    letter: /[A-Za-z]/.test(password),
-    number: /\d/.test(password),
-    special: /[^A-Za-z\d]/.test(password),
-  };
+  const reqs = checkPasswordRules(password);
 
   const returnTo = safeReturnTo();
 

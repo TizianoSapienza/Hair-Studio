@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Check, Clock, Loader2, Scissors, CalendarCheck, CalendarDays, Sparkles } from "lucide-react";
 import SiteHeader from "@/components/layout/SiteHeader";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import CalendarView from "@/components/booking/CalendarView";
 import { useAuth } from "@/lib/AuthContext";
 import { toast } from "sonner";
@@ -119,7 +120,7 @@ export default function Booking() {
           <div>
             <h2 className="font-heading text-lg font-semibold">Servizi</h2>
             {loadingSvc ? (
-              <div className="mt-4 flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+              <LoadingSpinner className="mt-4 py-10" />
             ) : (
               <div className="mt-4 space-y-2.5">
                 {services.map((s) => {

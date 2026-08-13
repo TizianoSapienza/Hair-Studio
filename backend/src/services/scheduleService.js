@@ -1,7 +1,8 @@
 import { pool, withTransaction } from "../db/pool.js";
 import { minutesToTime, rangesOverlap, timeToMinutes } from "../utils/time.js";
 
-const OCCUPYING_STATUSES = ["in_attesa", "confermata"];
+//Tutto tranne "cancellata" occupa lo slot.
+export const OCCUPYING_STATUSES = ["in_attesa", "confermata", "completata", "no_show"];
 
 export async function getSlotMinutes() {
   const { rows } = await pool.query("SELECT slot_minutes FROM app_settings WHERE id = 1");

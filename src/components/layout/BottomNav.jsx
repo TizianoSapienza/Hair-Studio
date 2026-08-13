@@ -16,7 +16,7 @@ const ADMIN_TABS = [
   { to: "/profilo", label: "Profilo", icon: UserCircle },
 ];
 
-const HIDDEN_ROUTES = ["/login", "/register", "/admin/login", "/forgot-password", "/reset-password"];
+const HIDDEN_ROUTES = ["/login", "/register", "/forgot-password", "/reset-password"];
 
 export default function BottomNav() {
   const { isAuthenticated, user } = useAuth();

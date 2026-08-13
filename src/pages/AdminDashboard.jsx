@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import CalendarView from "@/components/booking/CalendarView";
 import { useAdminEvents } from "@/hooks/useAdminEvents";
 import { toDateString, todayMidnight } from "@/lib/dateUtils";
+import { TODAY_COUNTED_BOOKING_STATUSES } from "@/lib/bookingStatus";
 
 export default function AdminDashboard() {
   const [date, setDate] = useState(todayMidnight());
@@ -35,7 +36,7 @@ export default function AdminDashboard() {
       ]);
 
       const countByStatus = (status) => (monthStats.byStatus || []).find((s) => s.status === status)?.count || 0;
-      const todayCount = (dayBookings.bookings || []).filter((b) => ["in_attesa", "confermata", "completata", "no_show"].includes(b.status)).length;
+      const todayCount = (dayBookings.bookings || []).filter((b) => TODAY_COUNTED_BOOKING_STATUSES.includes(b.status)).length;
       const completedMonth = countByStatus("completata") + countByStatus("no_show");
       const noShowMonth = countByStatus("no_show");
 

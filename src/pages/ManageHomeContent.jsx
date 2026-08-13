@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Loader2, Save, Home, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import AdminHeader from "@/components/layout/AdminHeader";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { extractError } from "@/lib/apiError";
 import { ImageUploadField } from "@/components/admin/ImageUploadField";
 
@@ -33,6 +34,13 @@ const FIELDS = [
   { key: "aboutComeFunziona", label: "Come funziona la prenotazione online", type: "textarea", section: "aboutPage" },
   { key: "aboutTeam", label: "Il team", type: "textarea", section: "aboutPage" },
 ];
+
+//FIELDS non cambia mai (definito qui sopra, non da stato): raggrupparlo una volta a livello
+//di modulo evita di rifiltrare l'intero array per ciascuna delle 6 sezioni ad ogni render.
+const FIELDS_BY_SECTION = FIELDS.reduce((acc, f) => {
+  (acc[f.section] ??= []).push(f);
+  return acc;
+}, {});
 
 const COLUMN_1_SECTIONS = [
   { key: "hero", title: "Hero" },
@@ -101,7 +109,7 @@ export default function ManageHomeContent() {
     );
 
   const renderSection = (s) => {
-    const fields = FIELDS.filter((f) => f.section === s.key);
+    const fields = FIELDS_BY_SECTION[s.key] || [];
     return (
       <div key={s.key} className="space-y-5 rounded-2xl border border-border bg-card p-5 sm:p-6">
         <div>
@@ -125,7 +133,7 @@ export default function ManageHomeContent() {
         <p className="mb-6 text-sm text-muted-foreground">Modifica i testi della homepage e della pagina About visibili a tutti i visitatori.</p>
 
         {loading ? (
-          <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          <LoadingSpinner className="py-20" />
         ) : (
           <form onSubmit={handleSave} className="space-y-6">
             <div className="space-y-6 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0 lg:items-start">

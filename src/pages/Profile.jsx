@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Mail, Phone, Loader2, Save, Trash2, KeyRound, UserCircle } from "lucide-react";
 import SiteHeader from "@/components/layout/SiteHeader";
-import { splitPhone, normalizePhoneDigits, PHONE_DIGITS_REGEX } from "@/lib/phone";
+import { splitPhone, normalizePhoneDigits, PHONE_DIGITS_REGEX, DEFAULT_COUNTRY_CODE } from "@/lib/phone";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useAuth } from "@/lib/AuthContext";
@@ -21,7 +21,7 @@ export default function Profile() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [code, setCode] = useState("+39");
+  const [code, setCode] = useState(DEFAULT_COUNTRY_CODE);
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

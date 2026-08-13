@@ -3,7 +3,7 @@ import { scheduleApi } from "@/api/scheduleApi";
 import { bookingsApi, blockedSlotsApi } from "@/api/bookingsApi";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { HoldToConfirmButton } from "@/components/ui/hold-to-confirm-button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -13,7 +13,9 @@ import { ChevronLeft, ChevronRight, Loader2, Ban, Lock, Check, CheckCircle2, Use
 import { formatDateIT, DAY_LABELS_LONG, timeToMinutes, minutesToTime } from "@/lib/salonConfig";
 import { toDateString, todayMidnight } from "@/lib/dateUtils";
 import { extractError } from "@/lib/apiError";
-import { isCancellableBooking } from "@/lib/bookingStatus";
+import { isCancellableBooking, OCCUPYING_BOOKING_STATUSES } from "@/lib/bookingStatus";
+import BookingStatusBadge from "@/components/booking/BookingStatusBadge";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useCalendarData } from "@/hooks/useCalendarData";
 import { Drawer, DrawerTrigger, DrawerContent, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -33,12 +35,9 @@ function isToday(dateStr) {
 }
 function nowTimeStr() {
   const d = new Date();
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return hh + ":" + mm;
+  return minutesToTime(d.getHours() * 60 + d.getMinutes());
 }
-//Stati che "occupano" fisicamente uno slot (vedi backend/src/services/scheduleService.js).
-const OCCUPYING_STATUSES = new Set(["in_attesa", "confermata"]);
+const OCCUPYING_STATUSES = new Set(OCCUPYING_BOOKING_STATUSES);
 
 const STATUS_STYLE = {
   free: { dot: "bg-success", label: "Libero", chip: "bg-success-soft text-success-soft-foreground" },
@@ -121,8 +120,7 @@ export default function CalendarView({
 
   const reload = async () => { await load(); onAfterAction && onAfterAction(); };
 
-  //Mappa staffId -> intervalli occupati, calcolata una volta per risposta invece di riscandire
-  //data.bookings ad ogni chiamata di opBusyAt (usata in due loop di rendering).
+  //Mappa staffId -> intervalli occupati, calcolata una volta per risposta
   const occupiedByStaff = useMemo(() => {
     const map = new Map();
     const slotMin = data?.slotMinutes || 30;
@@ -238,12 +236,10 @@ export default function CalendarView({
     [bookings, queryStaff]
   );
   const slotBookings = useMemo(
-    // b.startTime arriva da Postgres come "HH:MM:SS", slotModal come "HH:MM" (minutesToTime):
-    // confronto sui minuti invece che sulla stringa grezza per evitare il mismatch di formato.
     () => (slotModal ? visibleBookings.filter((b) => timeToMinutes(b.startTime) === timeToMinutes(slotModal)) : []),
     [slotModal, visibleBookings]
   );
-  const blockTimes = Array.from(blockSelection).sort();
+  const blockTimes = useMemo(() => Array.from(blockSelection).sort(), [blockSelection]);
 
   const blockableSlots = useMemo(
     () => (data && data.open ? data.slots.filter((s) => s.available && !past && inFilter(s.time, timeFilter, customFrom, customTo)) : []),
@@ -254,10 +250,15 @@ export default function CalendarView({
     [data, timeFilter, customFrom, customTo]
   );
   const bookedTimes = useMemo(() => new Set(visibleBookings.map((b) => b.startTime)), [visibleBookings]);
+  //Memoizzato
+  const busyOpIds = useMemo(
+    () => new Set((data?.operators || []).filter((op) => blockTimes.some((t) => opBusyAt(op.id, t))).map((op) => op.id)),
+    [data, blockTimes]
+  );
 
   const openBlockDialog = () => {
     setBlockName("");
-    const avail = (data?.operators || []).filter((op) => !blockTimes.some((t) => opBusyAt(op.id, t)));
+    const avail = (data?.operators || []).filter((op) => !busyOpIds.has(op.id));
     setBlockStaff(avail[0]?.id || "");
     setBlockOpen(true);
   };
@@ -298,70 +299,48 @@ export default function CalendarView({
           </div>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2">
-          {pending && (
-            <Badge variant="warning" className="status-badge-in">
-              <Clock className="mr-1 h-3.5 w-3.5" /> In attesa
-            </Badge>
-          )}
-          {confirmed && (
-            <Badge variant="info" className="status-badge-in">
-              <CheckCircle2 className="mr-1 h-3.5 w-3.5" /> Confermata
-            </Badge>
-          )}
-          {completed && (
-            <Badge variant="success" className="status-badge-in">
-              <Check className="mr-1 h-3.5 w-3.5" /> Completato
-            </Badge>
-          )}
-          {cancelled && (
-            <Badge variant="muted" className="status-badge-in">
-              <Ban className="mr-1 h-3.5 w-3.5" /> Cancellata
-            </Badge>
-          )}
-          {noShow && (
-            <Badge variant="destructiveSoft" className="status-badge-in">
-              <UserX className="mr-1 h-3.5 w-3.5" /> No-show
-            </Badge>
+          {(pending || confirmed || completed || cancelled || noShow) && (
+            <BookingStatusBadge status={b.status} className="status-badge-in" />
           )}
           {(pending || confirmed || blockActive || isBlock) && (
             <div className="grid w-full grid-cols-2 gap-2">
               {pending && (
                 <>
-                  <Button size="sm" className="w-full" onClick={onConfirm} disabled={readOnly || actionLoading === "confirm-" + b.id}>
+                  <HoldToConfirmButton size="sm" className="w-full" onConfirm={onConfirm} disabled={readOnly || actionLoading === "confirm-" + b.id}>
                     {actionLoading === "confirm-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-1 h-4 w-4" /> Conferma</>}
-                  </Button>
-                  <Button size="sm" variant="outline" className="w-full" onClick={onCancel} disabled={readOnly || actionLoading === "cancel-" + b.id}>
+                  </HoldToConfirmButton>
+                  <HoldToConfirmButton size="sm" variant="outline" className="w-full" onConfirm={onCancel} disabled={readOnly || actionLoading === "cancel-" + b.id}>
                     {actionLoading === "cancel-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Ban className="mr-1 h-4 w-4" /> Cancella</>}
-                  </Button>
+                  </HoldToConfirmButton>
                 </>
               )}
               {confirmed && (
                 <>
-                  <Button size="sm" className="w-full" onClick={onComplete} disabled={readOnly || actionLoading === "complete-" + b.id}>
+                  <HoldToConfirmButton size="sm" className="w-full" onConfirm={onComplete} disabled={readOnly || actionLoading === "complete-" + b.id}>
                     {actionLoading === "complete-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-1 h-4 w-4" /> Completa</>}
-                  </Button>
-                  <Button size="sm" variant="outline" className="w-full" onClick={onNoShow} disabled={readOnly || actionLoading === "noshow-" + b.id}>
+                  </HoldToConfirmButton>
+                  <HoldToConfirmButton size="sm" variant="outline" className="w-full" onConfirm={onNoShow} disabled={readOnly || actionLoading === "noshow-" + b.id}>
                     {actionLoading === "noshow-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><UserX className="mr-1 h-4 w-4" /> No-show</>}
-                  </Button>
-                  <Button size="sm" variant="outline" className="col-span-2 w-full" onClick={onCancel} disabled={readOnly || actionLoading === "cancel-" + b.id}>
+                  </HoldToConfirmButton>
+                  <HoldToConfirmButton size="sm" variant="outline" className="col-span-2 w-full" onConfirm={onCancel} disabled={readOnly || actionLoading === "cancel-" + b.id}>
                     {actionLoading === "cancel-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Ban className="mr-1 h-4 w-4" /> Cancella</>}
-                  </Button>
+                  </HoldToConfirmButton>
                 </>
               )}
               {blockActive && (
                 <>
-                  <Button size="sm" className="w-full" onClick={onBlockComplete} disabled={readOnly || actionLoading === "block-complete-" + b.id}>
+                  <HoldToConfirmButton size="sm" className="w-full" onConfirm={onBlockComplete} disabled={readOnly || actionLoading === "block-complete-" + b.id}>
                     {actionLoading === "block-complete-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Check className="mr-1 h-4 w-4" /> Completa</>}
-                  </Button>
-                  <Button size="sm" variant="outline" className="w-full" onClick={onBlockNoShow} disabled={readOnly || actionLoading === "block-noshow-" + b.id}>
+                  </HoldToConfirmButton>
+                  <HoldToConfirmButton size="sm" variant="outline" className="w-full" onConfirm={onBlockNoShow} disabled={readOnly || actionLoading === "block-noshow-" + b.id}>
                     {actionLoading === "block-noshow-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><UserX className="mr-1 h-4 w-4" /> No-show</>}
-                  </Button>
+                  </HoldToConfirmButton>
                 </>
               )}
               {isBlock && (
-                <Button size="sm" variant="outline" className={`w-full ${blockActive ? "col-span-2" : ""}`} onClick={onRemoveBlock} disabled={readOnly || actionLoading === "cancel-" + b.id}>
+                <HoldToConfirmButton size="sm" variant="outline" className={`w-full ${blockActive ? "col-span-2" : ""}`} onConfirm={onRemoveBlock} disabled={readOnly || actionLoading === "cancel-" + b.id}>
                   {actionLoading === "cancel-" + b.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Trash2 className="mr-1 h-4 w-4" /> Rimuovi</>}
-                </Button>
+                </HoldToConfirmButton>
               )}
             </div>
           )}
@@ -474,7 +453,7 @@ export default function CalendarView({
           </div>
         ) : null}
         {loading && !data ? (
-          <div className="mt-5 flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          <LoadingSpinner className="mt-5" />
         ) : closed ? (
           <div className="py-16 text-center">
             <Lock className="mx-auto h-8 w-8 text-muted-foreground" />
@@ -565,10 +544,10 @@ export default function CalendarView({
                   <h4 className="font-heading text-sm font-semibold">Prenotazioni del giorno ({visibleBookings.length}){queryStaff !== "any" ? ` · ${(data?.operators || []).find((o) => o.id === queryStaff)?.name || "operatore"}` : ""}</h4>
                   {selected.size > 0 && (
                     <div className="flex flex-wrap gap-2">
-                      <Button size="sm" variant="outline" onClick={() => bulkAction("confirm")} disabled={readOnly || !!actionLoading}><CheckCircle2 className="mr-1 h-4 w-4" /> Conferma ({selected.size})</Button>
-                      <Button size="sm" variant="default" onClick={() => bulkAction("complete")} disabled={readOnly || !!actionLoading}><Check className="mr-1 h-4 w-4" /> Completa ({selected.size})</Button>
-                      <Button size="sm" variant="outline" onClick={() => bulkAction("no_show")} disabled={readOnly || !!actionLoading}><UserX className="mr-1 h-4 w-4" /> No-show ({selected.size})</Button>
-                      <Button size="sm" variant="outline" onClick={() => bulkAction("delete")} disabled={readOnly || !!actionLoading}><Trash2 className="mr-1 h-4 w-4" /> Elimina ({selected.size})</Button>
+                      <HoldToConfirmButton size="sm" variant="outline" onConfirm={() => bulkAction("confirm")} disabled={readOnly || !!actionLoading}><CheckCircle2 className="mr-1 h-4 w-4" /> Conferma ({selected.size})</HoldToConfirmButton>
+                      <HoldToConfirmButton size="sm" variant="default" onConfirm={() => bulkAction("complete")} disabled={readOnly || !!actionLoading}><Check className="mr-1 h-4 w-4" /> Completa ({selected.size})</HoldToConfirmButton>
+                      <HoldToConfirmButton size="sm" variant="outline" onConfirm={() => bulkAction("no_show")} disabled={readOnly || !!actionLoading}><UserX className="mr-1 h-4 w-4" /> No-show ({selected.size})</HoldToConfirmButton>
+                      <HoldToConfirmButton size="sm" variant="outline" onConfirm={() => bulkAction("delete")} disabled={readOnly || !!actionLoading}><Trash2 className="mr-1 h-4 w-4" /> Elimina ({selected.size})</HoldToConfirmButton>
                     </div>
                   )}
                 </div>
@@ -607,7 +586,7 @@ export default function CalendarView({
               <p className="text-sm font-medium">Operatore</p>
               <div className="flex flex-wrap gap-2">
                 {(data?.operators || []).map((op) => {
-                  const busy = blockTimes.some((t) => opBusyAt(op.id, t));
+                  const busy = busyOpIds.has(op.id);
                   return (
                     <button type="button" key={op.id} disabled={busy} onClick={() => setBlockStaff(op.id)}
                       className={["rounded-full border px-3 py-1.5 text-sm font-medium transition-[color,background-color,border-color,box-shadow] duration-150 ease-out",

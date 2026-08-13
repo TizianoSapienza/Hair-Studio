@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, GitCompare, ChevronLeft, ChevronRight } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { EmptyState } from "@/components/ui/empty-state";
 import AdminHeader from "@/components/layout/AdminHeader";
 import StatsCompare from "@/components/admin/StatsCompare";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -36,17 +37,27 @@ function isoWeekMonday(year, week) {
   return mon;
 }
 
-function rangeFor(unit, value, year) {
+//`vals` ha una forma diversa a seconda di `unit` (settimana/mese/anno) — vedi valsFor().
+function rangeFor(unit, vals) {
   if (unit === "week") {
-    const mon = isoWeekMonday(year, value);
+    const mon = isoWeekMonday(vals.year, vals.week);
     const tue = new Date(mon); tue.setDate(mon.getDate() + 1);
     const sat = new Date(mon); sat.setDate(mon.getDate() + 5);
     return { from: toDateString(tue), to: toDateString(sat) };
   }
   if (unit === "month") {
-    return { from: toDateString(new Date(year, value - 1, 1)), to: toDateString(new Date(year, value, 0)) };
+    return { from: toDateString(new Date(vals.year, vals.month - 1, 1)), to: toDateString(new Date(vals.year, vals.month, 0)) };
   }
-  return { from: toDateString(new Date(year, 0, 1)), to: toDateString(new Date(year, 11, 31)) };
+  return { from: toDateString(new Date(vals.year, 0, 1)), to: toDateString(new Date(vals.year, 11, 31)) };
+}
+
+//Riduce {week,month,year} alla sola forma rilevante per l'unità corrente — evita di
+//ripetere lo stesso ternario `unit === "week" ? ... : unit === "month" ? ... : ...` in
+//quattro punti diversi (calcolo range per A/B, valori mostrati per A/B).
+function valsFor(period, unit) {
+  if (unit === "week") return { week: period.week, year: period.year };
+  if (unit === "month") return { month: period.month, year: period.year };
+  return { year: period.year };
 }
 
 const MONTH_SHORT = ["gen", "feb", "mar", "apr", "mag", "giu", "lug", "ago", "set", "ott", "nov", "dic"];
@@ -93,12 +104,12 @@ export default function AdminStats() {
   const curWeek = isoWeekNumber(now);
 
   const [unit, setUnit] = useState("month");
-  const [aWeek, setAWeek] = useState(curWeek);
-  const [aMonth, setAMonth] = useState(curMonth);
-  const [aYear, setAYear] = useState(curYear);
-  const [bWeek, setBWeek] = useState(curWeek);
-  const [bMonth, setBMonth] = useState(curMonth);
-  const [bYear, setBYear] = useState(curYear - 1);
+  const [periods, setPeriods] = useState({
+    A: { week: curWeek, month: curMonth, year: curYear },
+    B: { week: curWeek, month: curMonth, year: curYear - 1 },
+  });
+  const updatePeriod = (tag, field, value) =>
+    setPeriods((p) => ({ ...p, [tag]: { ...p[tag], [field]: value } }));
   const [dataA, setDataA] = useState(null);
   const [dataB, setDataB] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -106,7 +117,7 @@ export default function AdminStats() {
 
   const years = Array.from({ length: 5 }, (_, i) => curYear - 2 + i);
 
-  const selKey = useDebouncedValue(JSON.stringify({ unit, aWeek, aMonth, aYear, bWeek, bMonth, bYear, rtKey }), 250);
+  const selKey = useDebouncedValue(JSON.stringify({ unit, periods, rtKey }), 250);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,10 +125,8 @@ export default function AdminStats() {
     (async () => {
       setLoading(true);
       try {
-        const aVal = s.unit === "week" ? s.aWeek : s.unit === "month" ? s.aMonth : null;
-        const ra = rangeFor(s.unit, aVal, s.aYear);
-        const bVal = s.unit === "week" ? s.bWeek : s.unit === "month" ? s.bMonth : null;
-        const rb = rangeFor(s.unit, bVal, s.bYear);
+        const ra = rangeFor(s.unit, valsFor(s.periods.A, s.unit));
+        const rb = rangeFor(s.unit, valsFor(s.periods.B, s.unit));
         const [resA, resB] = await Promise.all([
           bookingsApi.adminStats({ from: ra.from, to: ra.to }),
           bookingsApi.adminStats({ from: rb.from, to: rb.to }),
@@ -136,17 +145,19 @@ export default function AdminStats() {
   //Aggiornamento real-time delle statistiche
   useAdminEvents(() => setRtKey((k) => k + 1));
 
-  const aVals = unit === "week" ? { week: aWeek, year: aYear } : unit === "month" ? { month: aMonth, year: aYear } : { year: aYear };
-  const bVals = unit === "week" ? { week: bWeek, year: bYear } : unit === "month" ? { month: bMonth, year: bYear } : { year: bYear };
+  const aVals = valsFor(periods.A, unit);
+  const bVals = valsFor(periods.B, unit);
   // ponytail: 52-week approximation, ignores ISO 53-week years — fine for browsing, revisit if that ever bites
-  const stepWeek = (delta, vals, setWeek, setYear) => {
-    const next = vals.week + delta;
-    if (next < 1) { setYear(vals.year - 1); setWeek(52); }
-    else if (next > 52) { setYear(vals.year + 1); setWeek(1); }
-    else setWeek(next);
+  const stepWeek = (tag, delta) => {
+    const p = periods[tag];
+    const next = p.week + delta;
+    if (next < 1) { updatePeriod(tag, "year", p.year - 1); updatePeriod(tag, "week", 52); }
+    else if (next > 52) { updatePeriod(tag, "year", p.year + 1); updatePeriod(tag, "week", 1); }
+    else updatePeriod(tag, "week", next);
   };
 
-  const renderPeriod = (tag, vals, setWeek, setMonth, setYear) => {
+  const renderPeriod = (tag) => {
+    const vals = valsFor(periods[tag], unit);
     const isA = tag === "A";
     return (
       <div className={`rounded-xl border p-3 ${isA ? "border-primary/30 bg-primary/5" : "border-brand/30 bg-brand/5"}`}>
@@ -160,11 +171,11 @@ export default function AdminStats() {
           {unit === "week" && (
             <Field label="Settimana">
               <div className="flex items-center gap-1">
-                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" aria-label="Settimana precedente" onClick={() => stepWeek(-1, vals, setWeek, setYear)}>
+                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" aria-label="Settimana precedente" onClick={() => stepWeek(tag, -1)}>
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <span className="flex-1 rounded-md border border-input bg-background px-2 py-1.5 text-center text-sm font-medium">Sett. {vals.week}</span>
-                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" aria-label="Settimana successiva" onClick={() => stepWeek(1, vals, setWeek, setYear)}>
+                <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0" aria-label="Settimana successiva" onClick={() => stepWeek(tag, 1)}>
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -172,7 +183,7 @@ export default function AdminStats() {
           )}
           {unit === "month" && (
             <Field label="Mese">
-              <Select value={String(vals.month)} onValueChange={(v) => setMonth(Number(v))}>
+              <Select value={String(vals.month)} onValueChange={(v) => updatePeriod(tag, "month", Number(v))}>
                 <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {MONTH_LABELS.map((m, i) => <SelectItem key={i + 1} value={String(i + 1)}>{m}</SelectItem>)}
@@ -181,7 +192,7 @@ export default function AdminStats() {
             </Field>
           )}
           <Field label="Anno">
-            <Select value={String(vals.year)} onValueChange={(v) => setYear(Number(v))}>
+            <Select value={String(vals.year)} onValueChange={(v) => updatePeriod(tag, "year", Number(v))}>
               <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
               <SelectContent>
                 {years.map((y) => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
@@ -213,8 +224,8 @@ export default function AdminStats() {
             <GitCompare className="h-4 w-4 text-primary" /> Confronta due periodi
           </div>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {renderPeriod("A", aVals, setAWeek, setAMonth, setAYear)}
-            {renderPeriod("B", bVals, setBWeek, setBMonth, setBYear)}
+            {renderPeriod("A")}
+            {renderPeriod("B")}
           </div>
         </div>
 
@@ -226,7 +237,7 @@ export default function AdminStats() {
         {loading && !dataA ? (
           <LoadingSpinner />
         ) : !dataA ? (
-          <div className="rounded-2xl border border-dashed border-border bg-card p-12 text-center text-sm text-muted-foreground">Impossibile caricare le statistiche.</div>
+          <EmptyState title="Impossibile caricare le statistiche." />
         ) : (
           <div className={loading ? "opacity-70" : ""}>
             <StatsCompare labelA={labelFor(unit, aVals)} labelB={labelFor(unit, bVals)} dataA={dataA} dataB={dataB} />

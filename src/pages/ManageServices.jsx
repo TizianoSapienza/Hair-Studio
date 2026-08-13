@@ -259,7 +259,7 @@ export default function ManageServices() {
             <DialogTitle>Storico modifiche — {history?.service?.name}</DialogTitle>
           </DialogHeader>
           {historyLoading ? (
-            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            <LoadingSpinner className="py-8" />
           ) : (history?.items || []).length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">Nessuna modifica registrata a prezzo o durata.</p>
           ) : (

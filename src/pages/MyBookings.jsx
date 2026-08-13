@@ -1,17 +1,17 @@
-import React from "react";
+import React, { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { bookingsApi } from "@/api/bookingsApi";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CalendarDays, Ban, Loader2, Scissors, Clock, AlertTriangle } from "lucide-react";
 import SiteHeader from "@/components/layout/SiteHeader";
 import { EmptyState } from "@/components/ui/empty-state";
+import BookingStatusBadge from "@/components/booking/BookingStatusBadge";
 import { toast } from "sonner";
 import { formatDateIT } from "@/lib/salonConfig";
 import { useSse } from "@/hooks/useSse";
-import { isCancellableBooking } from "@/lib/bookingStatus";
+import { isCancellableBooking, UPCOMING_BOOKING_STATUSES } from "@/lib/bookingStatus";
 
 export default function MyBookings() {
   const queryClient = useQueryClient();
@@ -44,9 +44,12 @@ export default function MyBookings() {
     onSuccess: () => toast.success("Prenotazione cancellata"),
   });
 
-  const upcoming = bookings
-    .filter((b) => ["in_attesa", "confermata", "completata"].includes(b.status))
-    .sort((a, b) => (a.bookingDate + a.startTime).localeCompare(b.bookingDate + b.startTime));
+  const upcoming = useMemo(
+    () => bookings
+      .filter((b) => UPCOMING_BOOKING_STATUSES.includes(b.status))
+      .sort((a, b) => (a.bookingDate + a.startTime).localeCompare(b.bookingDate + b.startTime)),
+    [bookings]
+  );
 
   return (
     <div className="flex min-h-screen flex-col bg-secondary/30">
@@ -100,9 +103,7 @@ export default function MyBookings() {
                     </p>
                   </div>
                   <div className="flex flex-col items-end gap-2">
-                    {b.status === "in_attesa" && <Badge variant="warning" className="px-3 py-1.5">In attesa</Badge>}
-                    {b.status === "confermata" && <Badge variant="info" className="px-3 py-1.5">Confermata</Badge>}
-                    {b.status === "completata" && <Badge variant="success" className="px-3 py-1.5">Completato</Badge>}
+                    <BookingStatusBadge status={b.status} className="px-3 py-1.5" showIcon={false} />
                     {isCancellableBooking(b.status) && (
                       <Button variant="outline" onClick={() => cancelMutation.mutate(b.id)} disabled={cancelMutation.isPending && cancelMutation.variables === b.id}>
                         {cancelMutation.isPending && cancelMutation.variables === b.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Ban className="mr-2 h-4 w-4" />}

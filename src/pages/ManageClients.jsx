@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { clientsApi } from "@/api/contentApi";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ export default function ManageClients() {
       .finally(() => { if (myId === loadIdRef.current) setLoading(false); });
   }, []);
 
-  const clients = users.filter((u) => u.role !== "admin");
+  const clients = useMemo(() => users.filter((u) => u.role !== "admin"), [users]);
 
   return (
     <div className="flex min-h-screen flex-col bg-secondary/30">

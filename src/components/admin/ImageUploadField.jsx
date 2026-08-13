@@ -4,6 +4,7 @@ import { Label } from "@/components/ui/label";
 import { Image } from "@/components/ui/image";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Loader2, Upload, Images } from "lucide-react";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { toast } from "sonner";
 import { uploadsApi } from "@/api/uploadApi";
 import { extractError } from "@/lib/apiError";
@@ -103,7 +104,7 @@ export function ImageUploadField({ label, value, onChange, folder }) {
         <input
           ref={inputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept={Object.keys(TYPE_EXTENSIONS).join(",")}
           className="hidden"
           onChange={handleFile}
         />
@@ -113,7 +114,7 @@ export function ImageUploadField({ label, value, onChange, folder }) {
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader><DialogTitle>Galleria immagini</DialogTitle></DialogHeader>
           {galleryLoading ? (
-            <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+            <LoadingSpinner className="py-10" />
           ) : images.length === 0 ? (
             <p className="py-10 text-center text-sm text-muted-foreground">Nessuna immagine caricata finora.</p>
           ) : (
